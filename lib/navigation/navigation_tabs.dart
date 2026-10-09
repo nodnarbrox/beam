@@ -1,0 +1,141 @@
+import 'package:flutter/material.dart';
+import 'package:plezy/widgets/app_icon.dart';
+import 'package:material_symbols_icons/symbols.dart';
+
+import '../i18n/strings.g.dart';
+import '../utils/platform_detector.dart';
+
+/// Navigation tab identifiers
+enum NavigationTabId { videoStore, beam, games, discover, explore, libraries, liveTv, search, downloads, settings }
+
+/// Represents a navigation tab with its configuration
+class NavigationTab {
+  final NavigationTabId id;
+  final bool onlineOnly;
+  final IconData icon;
+  final String Function() getLabel;
+
+  const NavigationTab({required this.id, required this.onlineOnly, required this.icon, required this.getLabel});
+
+  NavigationDestination toDestination() {
+    return NavigationDestination(icon: AppIcon(icon, fill: 1), selectedIcon: AppIcon(icon, fill: 1), label: getLabel());
+  }
+
+  /// Get tabs filtered by offline mode and feature availability
+  static List<NavigationTab> getVisibleTabs({
+    required bool isOffline,
+    bool hasLiveTv = false,
+    bool hasExplore = false,
+    bool hasKnownServers = false,
+  }) {
+    return allNavigationTabs.where((tab) {
+      // Online-only tabs (Store, Home, Libraries…) normally hide in offline
+      // mode. But the offline flag can be a false alarm — e.g. behind a VPN the
+      // connectivity/LAN probe reports "offline" even though a Plex server is
+      // signed in and reachable remotely. So keep the server-backed tabs
+      // visible whenever the user actually HAS a known server; only truly
+      // server-less/offline sessions collapse to Beam/Downloads/Settings.
+      if (isOffline && tab.onlineOnly && !hasKnownServers) return false;
+      // Direct TV is available without a Plex/Jellyfin server.
+      if (tab.id == NavigationTabId.explore && !hasExplore) return false;
+      if (tab.id == NavigationTabId.downloads && PlatformDetector.isAppleTV()) return false;
+      return true;
+    }).toList();
+  }
+
+  /// Resolve which tab the app should open to on launch.
+  ///
+  /// Offline mode prefers Downloads when available. Online, honours the user's
+  /// [preferredStartup] section when it is currently visible, otherwise falls
+  /// back to the first visible tab (Home).
+  static NavigationTabId resolveDefaultTab({
+    required bool isOffline,
+    required bool hasLiveTv,
+    bool hasExplore = false,
+    bool hasKnownServers = false,
+    required NavigationTabId? preferredStartup,
+  }) {
+    // Use the SAME visibility set as the rail (incl. hasKnownServers) so the
+    // chosen default is always a tab that actually renders.
+    final tabs = getVisibleTabs(
+      isOffline: isOffline,
+      hasLiveTv: hasLiveTv,
+      hasExplore: hasExplore,
+      hasKnownServers: hasKnownServers,
+    );
+    // Only a TRULY server-less offline session lands on Downloads. The offline
+    // probe is a known false-positive behind a VPN; when the user has a known
+    // server, landing on Downloads on cold start read as random and wrong.
+    if (isOffline && !hasKnownServers && tabs.any((t) => t.id == NavigationTabId.downloads)) {
+      return NavigationTabId.downloads;
+    }
+    if (preferredStartup != null && tabs.any((t) => t.id == preferredStartup)) {
+      return preferredStartup;
+    }
+    // The 3D video store is the default launch experience whenever it is
+    // visible (a known server behind a false-"offline" VPN probe still counts).
+    if (tabs.any((t) => t.id == NavigationTabId.videoStore)) {
+      return NavigationTabId.videoStore;
+    }
+    return tabs.first.id;
+  }
+}
+
+// Label getters (must be top-level for const constructor)
+String _getVideoStoreLabel() => 'Store';
+String _getGamesLabel() => 'Games';
+String _getHomeLabel() => t.common.home;
+String _getExploreLabel() => t.navigation.explore;
+String _getLibrariesLabel() => t.navigation.libraries;
+String _getLiveTvLabel() => t.navigation.liveTv;
+String _getSearchLabel() => t.common.search;
+String _getDownloadsLabel() => t.navigation.downloads;
+String _getSettingsLabel() => t.common.settings;
+
+/// All navigation tabs in display order
+const allNavigationTabs = [
+  NavigationTab(
+    id: NavigationTabId.videoStore,
+    onlineOnly: true,
+    icon: Symbols.local_movies_rounded,
+    getLabel: _getVideoStoreLabel,
+  ),
+  NavigationTab(id: NavigationTabId.discover, onlineOnly: true, icon: Symbols.home_rounded, getLabel: _getHomeLabel),
+  NavigationTab(
+    id: NavigationTabId.games,
+    onlineOnly: false,
+    icon: Symbols.sports_esports_rounded,
+    getLabel: _getGamesLabel,
+  ),
+  NavigationTab(
+    id: NavigationTabId.libraries,
+    onlineOnly: true,
+    icon: Symbols.video_library_rounded,
+    getLabel: _getLibrariesLabel,
+  ),
+  NavigationTab(
+    id: NavigationTabId.liveTv,
+    onlineOnly: false,
+    icon: Symbols.live_tv_rounded,
+    getLabel: _getLiveTvLabel,
+  ),
+  NavigationTab(
+    id: NavigationTabId.explore,
+    onlineOnly: true,
+    icon: Symbols.explore_rounded,
+    getLabel: _getExploreLabel,
+  ),
+  NavigationTab(id: NavigationTabId.search, onlineOnly: true, icon: Symbols.search_rounded, getLabel: _getSearchLabel),
+  NavigationTab(
+    id: NavigationTabId.downloads,
+    onlineOnly: false,
+    icon: Symbols.download_rounded,
+    getLabel: _getDownloadsLabel,
+  ),
+  NavigationTab(
+    id: NavigationTabId.settings,
+    onlineOnly: false,
+    icon: Symbols.settings_rounded,
+    getLabel: _getSettingsLabel,
+  ),
+];

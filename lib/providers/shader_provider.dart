@@ -1,0 +1,137 @@
+import 'dart:async' show unawaited;
+
+import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
+
+import '../mixins/disposable_change_notifier_mixin.dart';
+import '../models/shader_preset.dart';
+import '../services/settings_binding_owner.dart';
+import '../services/settings_service.dart';
+import '../services/shader_asset_loader.dart';
+
+class ShaderProvider extends ChangeNotifier with DisposableChangeNotifierMixin {
+  late final SettingsBindingOwner _settingsBinding;
+
+  ShaderPreset _savedPreset = ShaderPreset.none;
+  ShaderPreset _currentPreset = ShaderPreset.none;
+  List<ShaderPreset> _customPresets = [];
+  List<ShaderPreset> _allPresets = ShaderPreset.allPresets;
+  bool _initialized = false;
+
+  ShaderProvider() {
+    _settingsBinding = SettingsBindingOwner(
+      prefs: [SettingsService.globalShaderPreset, SettingsService.customShaderPresets],
+      onRefresh: _syncFromSettings,
+    );
+    unawaited(_settingsBinding.bind());
+  }
+
+  void _syncFromSettings(SettingsService service) {
+    final customPresets = <ShaderPreset>[];
+    for (final json in service.read(SettingsService.customShaderPresets)) {
+      try {
+        final preset = ShaderPreset.fromJson(json);
+        final fileName = preset.fileName;
+        if (preset.type == ShaderPresetType.custom &&
+            fileName != null &&
+            ShaderAssetLoader.isValidCustomShaderFileName(fileName)) {
+          customPresets.add(preset);
+        }
+      } on Object {
+        // Imported settings can contain structurally invalid custom rows.
+      }
+    }
+    _customPresets = customPresets;
+    _refreshAllPresets();
+
+    final presetId = service.read(SettingsService.globalShaderPreset);
+    _savedPreset = findPresetById(presetId) ?? ShaderPreset.none;
+    _currentPreset = _savedPreset;
+
+    _initialized = true;
+    safeNotifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _settingsBinding.dispose();
+    super.dispose();
+  }
+
+  bool get initialized => _initialized;
+  ShaderPreset get savedPreset => _savedPreset;
+  ShaderPreset get currentPreset => _currentPreset;
+  List<ShaderPreset> get allPresets => _allPresets;
+  List<ShaderPreset> get customPresets => _customPresets;
+  bool get isShaderEnabled => _currentPreset.type != ShaderPresetType.none;
+
+  ShaderPreset? findPresetById(String id) {
+    return ShaderPreset.fromId(id) ?? _customPresets.firstWhereOrNull((p) => p.id == id);
+  }
+
+  Future<void> setPreset(ShaderPreset preset) async {
+    final service = _settingsBinding.settings ?? await SettingsService.getInstance();
+    await service.write(SettingsService.globalShaderPreset, preset.id);
+    final changed = _savedPreset.id != preset.id || _currentPreset.id != preset.id;
+    _savedPreset = preset;
+    _currentPreset = preset;
+    if (changed || _settingsBinding.settings == null) {
+      safeNotifyListeners();
+    }
+  }
+
+  /// Update the current preset without persisting (e.g. toggling off temporarily)
+  void setCurrentPreset(ShaderPreset preset) {
+    if (_currentPreset.id != preset.id) {
+      _currentPreset = preset;
+      notifyListeners();
+    }
+  }
+
+  /// Import a custom shader from a file path.
+  /// Copies the file to the custom shaders directory and creates a preset.
+  Future<ShaderPreset> importCustomShader(String filePath, String displayName) async {
+    final storedFileName = await ShaderAssetLoader.importCustomShader(filePath);
+    final id = 'custom_$storedFileName';
+
+    final preset = ShaderPreset(id: id, name: displayName, type: ShaderPresetType.custom, fileName: storedFileName);
+
+    _customPresets.add(preset);
+    _refreshAllPresets();
+    await _saveCustomPresets();
+    return preset;
+  }
+
+  /// Delete a custom shader preset and its file.
+  Future<void> deleteCustomShader(ShaderPreset preset) async {
+    final wasActive = _currentPreset.id == preset.id || _savedPreset.id == preset.id;
+    if (preset.fileName != null) {
+      await ShaderAssetLoader.deleteCustomShader(preset.fileName!);
+    }
+    _customPresets.removeWhere((p) => p.id == preset.id);
+    _refreshAllPresets();
+    await _saveCustomPresets();
+
+    // Reset to none if the deleted preset was active
+    if (wasActive) {
+      await setPreset(ShaderPreset.none);
+    }
+  }
+
+  void _refreshAllPresets() {
+    _allPresets = _customPresets.isEmpty
+        ? ShaderPreset.allPresets
+        : List.unmodifiable([...ShaderPreset.allPresets, ..._customPresets]);
+  }
+
+  Future<void> _saveCustomPresets() async {
+    final service = _settingsBinding.settings ?? await SettingsService.getInstance();
+    final data = _customPresets.map((p) => p.toJson()).toList();
+    await service.write(SettingsService.customShaderPresets, data);
+  }
+
+  /// Reset to default (no shaders)
+  Future<void> reset() async {
+    await setPreset(ShaderPreset.none);
+  }
+}

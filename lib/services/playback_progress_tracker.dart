@@ -1,0 +1,517 @@
+import 'dart:async';
+import '../media/ids.dart';
+
+import '../mpv/mpv.dart';
+
+import '../media/media_backend.dart';
+import '../media/media_item.dart';
+import '../media/media_server_client.dart';
+import '../media/media_source_info.dart';
+import '../media/watch_progress.dart';
+import 'offline_watch_sync_service.dart';
+import 'playback_report_session.dart';
+import 'settings_service.dart';
+import 'track_selection_service.dart';
+import '../utils/app_logger.dart';
+import '../utils/watch_state_notifier.dart';
+
+/// Tracks playback progress and reports it to the active media server.
+///
+/// Both Plex and Jellyfin go through the unified
+/// [MediaServerClient.reportPlayback*] surface — Plex maps the three signals
+/// onto `/:/timeline` updates with appropriate `state`, Jellyfin uses the
+/// three `/Sessions/Playing*` endpoints. Scrobble fires once the position
+/// crosses the client's [watchedThreshold] (per-server pref on Plex, fixed
+/// 90% on Jellyfin).
+class PlaybackProgressTracker {
+  /// Server client for online progress updates (null when offline). Pinned
+  /// for the tracker's lifetime — one playback session against the server
+  /// that started it; if that server is removed mid-playback, reports fail
+  /// and are queued/dropped rather than re-routed.
+  final MediaServerClient? client;
+
+  /// Metadata of the media being played
+  final MediaItem metadata;
+
+  /// Video player instance
+  final Player player;
+
+  /// Whether playback is in offline mode
+  final bool isOffline;
+
+  /// Service for queuing offline progress updates
+  final OfflineWatchSyncService? offlineWatchService;
+
+  /// Queue the latest progress locally if online reporting fails. Used for
+  /// downloaded/local playback where playback can continue without a server.
+  final bool queueOnOnlineFailure;
+
+  final String? playMethod;
+
+  /// Backend session ID to echo in progress reports. Jellyfin uses this to
+  /// associate `/Sessions/Playing*` calls with a transcoded playback session.
+  final String? playSessionId;
+
+  /// Source-level stream metadata for mapping local player track ids back to
+  /// Jellyfin stream indexes in playback-progress reports.
+  final MediaSourceInfo? mediaInfo;
+
+  /// Invoked once after the item is successfully scrobbled. The player wires
+  /// this to mark same-file sibling episodes of a Plex multi-episode file
+  /// watched (#1500) — resolved lazily here because the play queue holding
+  /// the siblings is created fire-and-forget and may not exist when this
+  /// tracker is constructed. Best-effort: failures are logged and never
+  /// un-scrobble the primary item.
+  final Future<void> Function()? onScrobbled;
+
+  /// Invoked on every paused progress tick. The player wires this to the
+  /// Plex transcoder keepalive ping (`/video/:/transcode/universal/ping`) —
+  /// timeline reports alone historically have not been enough to stop PMS
+  /// from reaping an idle transcode, so official Plex clients send both
+  /// while paused. Best-effort; failures are the callee's to swallow.
+  final Future<void> Function()? onPausedKeepalive;
+
+  /// Whether non-terminal playback reports reflect real playback output.
+  /// Video passes first-frame readiness so a native clock cannot create
+  /// progress before any renderer produces a frame. Other callers default to
+  /// ready.
+  final bool Function()? canReportPlayback;
+
+  /// Whether this item has produced real playback output at least once.
+  /// A stopped report still terminates the backend session when false, but
+  /// must not turn an unrendered native clock position into watched progress.
+  final bool Function()? hasRenderedPlayback;
+
+  /// Timer for periodic progress updates
+  Timer? _progressTimer;
+
+  StreamSubscription<TrackSelection>? _trackSelectionSubscription;
+
+  /// Update interval (default: 10 seconds)
+  final Duration updateInterval;
+
+  /// Counts consecutive online progress failures for backoff logic.
+  int _consecutiveFailures = 0;
+
+  /// Timer ticks to skip before retrying after failures (exponential backoff).
+  int _ticksToSkip = 0;
+
+  /// Whether we've already scrobbled (marked as watched) for this playback session.
+  bool _scrobbled = false;
+
+  /// Whether the final stopped progress event was already emitted locally.
+  bool _stopProgressNotified = false;
+
+  Future<void>? _stoppedProgressFuture;
+
+  Duration? _lastProgressNotifiedPosition;
+  Duration? _lastReportablePosition;
+
+  static const Duration _progressNotifyDelta = Duration(seconds: 30);
+
+  final PlaybackReportSession? _reportSession;
+
+  PlaybackProgressTracker({
+    required this.client,
+    required this.metadata,
+    required this.player,
+    this.isOffline = false,
+    this.offlineWatchService,
+    this.queueOnOnlineFailure = false,
+    this.playMethod,
+    this.playSessionId,
+    this.mediaInfo,
+    this.onScrobbled,
+    this.onPausedKeepalive,
+    this.canReportPlayback,
+    this.hasRenderedPlayback,
+    this.updateInterval = const Duration(seconds: 10),
+  }) : assert(!isOffline || offlineWatchService != null, 'offlineWatchService is required when isOffline is true'),
+       assert(isOffline || client != null, 'client is required when isOffline is false'),
+       _reportSession = isOffline || client == null
+           ? null
+           : PlaybackReportSession(
+               client: client,
+               itemId: metadata.id,
+               playSessionId: playSessionId,
+               playMethod: playMethod,
+             );
+
+  void startTracking() {
+    if (_progressTimer != null) {
+      appLogger.w('Progress tracking already started');
+      return;
+    }
+
+    if (!isOffline) {
+      _trackSelectionSubscription = player.streams.track.listen((_) {
+        if (!player.state.isActive && (_reportSession?.isIdle ?? true)) return;
+        final state = player.state.isActive ? 'playing' : 'paused';
+        unawaited(_sendProgress(state));
+      });
+    }
+
+    // Send initial progress immediately (don't wait for first timer tick)
+    if (player.state.isActive) {
+      _sendProgress('playing');
+    }
+
+    _progressTimer = Timer.periodic(updateInterval, (timer) {
+      // Skip ticks when backing off after consecutive failures to avoid
+      // flooding the network with doomed requests during an outage.
+      if (_ticksToSkip > 0) {
+        _ticksToSkip--;
+        return;
+      }
+      if (player.state.isActive) {
+        _sendProgress('playing');
+      } else {
+        // Report every tick while paused too — official clients do the
+        // same (~10s); the timeline heartbeat is what keeps the server
+        // session and its transcoder from being reaped during a long
+        // pause (#1520).
+        _sendProgress('paused');
+        final keepalive = onPausedKeepalive;
+        if (keepalive != null) unawaited(keepalive());
+      }
+    });
+
+    appLogger.d('Started progress tracking (interval: ${updateInterval.inSeconds}s, offline: $isOffline)');
+  }
+
+  void stopTracking() {
+    _progressTimer?.cancel();
+    _progressTimer = null;
+    _trackSelectionSubscription?.cancel();
+    _trackSelectionSubscription = null;
+    appLogger.d('Stopped progress tracking');
+  }
+
+  /// [state] can be 'playing', 'paused', or 'stopped'.
+  Future<void> sendProgress(String state, {Duration? positionOverride}) async {
+    await _sendProgress(state, positionOverride: positionOverride);
+  }
+
+  Future<void> sendStoppedProgressOnce({Duration? positionOverride}) {
+    final existing = _stoppedProgressFuture;
+    if (existing != null) return existing;
+    final future = sendProgress('stopped', positionOverride: positionOverride);
+    _stoppedProgressFuture = future;
+    return future;
+  }
+
+  void resumeAfterStoppedReport() {
+    _stoppedProgressFuture = null;
+    _reportSession?.resetAfterStop();
+  }
+
+  Future<void> _sendProgress(String state, {Duration? positionOverride}) async {
+    Duration? attemptedPosition;
+    Duration? attemptedDuration;
+    try {
+      final canReport = canReportPlayback?.call() ?? true;
+      final hasRenderedOutput = hasRenderedPlayback?.call() ?? canReport;
+      if (state != 'stopped' && !canReport) return;
+      final isSuppressedStop = state == 'stopped' && !canReport;
+      final duration = player.state.duration;
+      final positionSource = isSuppressedStop
+          ? _lastReportablePosition ?? Duration(milliseconds: metadata.viewOffsetMs ?? 0)
+          : positionOverride ?? player.state.position;
+      final position = _clampPosition(positionSource, duration);
+      if (canReport && hasRenderedOutput) _lastReportablePosition = position;
+      final canCommitStoppedProgress = hasRenderedOutput && (!isSuppressedStop || _lastReportablePosition != null);
+      attemptedPosition = position;
+      attemptedDuration = duration;
+
+      // Don't send progress if no duration (not ready)
+      if (duration.inMilliseconds == 0) {
+        return;
+      }
+
+      if (isOffline) {
+        // There is no backend session to terminate offline. Do not turn a
+        // resume offset into a fresh queued update when this run rendered
+        // nothing.
+        if (!canCommitStoppedProgress) return;
+        await _sendOfflineProgress(position, duration);
+        _notifyProgressIfNeeded(position, duration, force: state == 'stopped');
+      } else if (state == 'stopped') {
+        // Stopped must complete before disposal. When reporting was disabled
+        // by a fatal error, use the last position captured while output was
+        // healthy rather than the still-advancing native media clock.
+        final accepted = await _sendOnlineProgress(state, position, duration, allowScrobble: canCommitStoppedProgress);
+        _resetBackoff();
+        if (accepted && canCommitStoppedProgress) {
+          _notifyProgressIfNeeded(position, duration, force: true);
+        }
+      } else {
+        // Fire-and-forget for playing/paused — avoid blocking the Dart event loop
+        unawaited(
+          _sendOnlineProgress(state, position, duration)
+              .then((accepted) {
+                _resetBackoff();
+                if (accepted) {
+                  _notifyProgressIfNeeded(position, duration);
+                }
+              })
+              .catchError((Object e) {
+                _recordProgressFailure(e);
+                unawaited(_queueOnlineFailureProgress(position, duration));
+              }),
+        );
+      }
+    } catch (e) {
+      if (!isOffline) {
+        _recordProgressFailure(e);
+        await _queueOnlineFailureProgress(
+          attemptedPosition ?? player.state.position,
+          attemptedDuration ?? player.state.duration,
+        );
+      } else {
+        appLogger.d('Failed to send progress update (non-critical)', error: e);
+      }
+    }
+  }
+
+  Duration _clampPosition(Duration position, Duration duration) {
+    if (duration.inMilliseconds <= 0) return position;
+    if (position.isNegative) return Duration.zero;
+    if (position > duration) return duration;
+    return position;
+  }
+
+  Future<void> _queueOnlineFailureProgress(Duration position, Duration duration) async {
+    if (!queueOnOnlineFailure || offlineWatchService == null) return;
+    if (duration.inMilliseconds == 0) return;
+    try {
+      await _sendOfflineProgress(_clampPosition(position, duration), duration);
+    } catch (e) {
+      appLogger.d('Failed to queue fallback progress after online report failure', error: e);
+    }
+  }
+
+  void _recordProgressFailure(Object e) {
+    _consecutiveFailures++;
+    // Exponential backoff: skip 1, 2, 4, 8... ticks (capped at 6 ≈ 60s)
+    _ticksToSkip = (1 << (_consecutiveFailures - 1)).clamp(1, 6);
+    appLogger.d(
+      'Progress update failed ($_consecutiveFailures consecutive), '
+      'skipping next $_ticksToSkip tick(s)',
+      error: e,
+    );
+  }
+
+  void _resetBackoff() {
+    if (_consecutiveFailures > 0) {
+      _consecutiveFailures = 0;
+      _ticksToSkip = 0;
+    }
+  }
+
+  void _notifyProgressIfNeeded(Duration position, Duration duration, {bool force = false}) {
+    if (_scrobbled) return;
+    if (position.inMilliseconds <= 0 || duration.inMilliseconds <= 0) return;
+    if (force) {
+      if (_stopProgressNotified) return;
+      _stopProgressNotified = true;
+    } else {
+      final last = _lastProgressNotifiedPosition;
+      if (last != null && (position - last).abs() < _progressNotifyDelta) return;
+    }
+
+    _lastProgressNotifiedPosition = position;
+    WatchStateNotifier().notifyProgress(
+      item: metadata,
+      cacheServerId: client?.cacheServerId,
+      viewOffset: position.inMilliseconds,
+      duration: duration.inMilliseconds,
+      watchedThreshold: client?.watchedThreshold ?? 0.9,
+    );
+  }
+
+  /// Send progress update to the active server through the unified
+  /// [MediaServerClient.reportPlayback*] surface.
+  Future<bool> _sendOnlineProgress(
+    String state,
+    Duration position,
+    Duration duration, {
+    bool allowScrobble = true,
+  }) async {
+    final c = client;
+    final session = _reportSession;
+    if (c == null || session == null) return false;
+
+    final accepted = await session.report(
+      PlaybackReportSnapshot(
+        state: state,
+        position: position,
+        duration: duration,
+        resolveStreamSelection: state == 'stopped'
+            ? _currentStreamSelectionForStopped
+            : _currentStreamSelectionForProgress,
+      ),
+    );
+
+    if (accepted && allowScrobble) {
+      await _maybeScrobble(c, position, duration);
+    }
+    return accepted;
+  }
+
+  PlaybackStreamSelection _currentStreamSelectionForStopped() {
+    final info = mediaInfo;
+    return info == null ? PlaybackStreamSelection.none : PlaybackStreamSelection(mediaSourceId: info.mediaSourceId);
+  }
+
+  Future<void> _maybeScrobble(MediaServerClient c, Duration position, Duration duration) async {
+    // Explicitly scrobble once progress crosses the watched threshold.
+    // Some servers (Plex with no active play session, Jellyfin always)
+    // don't auto-mark from progress updates alone.
+    if (!_scrobbled &&
+        isWatchedProgress(
+          positionMs: position.inMilliseconds,
+          durationMs: duration.inMilliseconds,
+          threshold: c.watchedThreshold,
+        )) {
+      final percent = position.inMilliseconds / duration.inMilliseconds;
+      final threshold = c.watchedThreshold;
+      _scrobbled = true;
+      try {
+        // Backends that mark the item played from the playback-stopped report
+        // (Jellyfin) only emit the local watch event here — an explicit
+        // markWatched would double-scrobble via the Trakt plugin (#1287).
+        // Plex still issues the server call. Either path emits the watched
+        // event through WatchStateNotifier, so no extra notify is needed.
+        await c.markWatchedFromPlaybackStop(metadata);
+        appLogger.d(
+          'Scrobbled ${metadata.id} (${(percent * 100).toStringAsFixed(0)}% >= ${(threshold * 100).toStringAsFixed(0)}%)',
+        );
+      } catch (e) {
+        appLogger.w('Failed to scrobble ${metadata.id}', error: e);
+        _scrobbled = false; // Retry on next tick
+      }
+      // After (and only after) the primary mark succeeded. A failure here
+      // must not reset _scrobbled — that would re-scrobble the primary
+      // item and inflate its view count.
+      if (_scrobbled && onScrobbled != null) {
+        try {
+          await onScrobbled!();
+        } catch (e) {
+          appLogger.w('Post-scrobble hook failed for ${metadata.id}', error: e);
+        }
+      }
+    }
+  }
+
+  Future<PlaybackStreamSelection> _currentStreamSelectionForProgress() async {
+    final info = mediaInfo;
+    if (info == null) {
+      return PlaybackStreamSelection.none;
+    }
+
+    if (!await _shouldReportTrackSelections()) {
+      return PlaybackStreamSelection(mediaSourceId: info.mediaSourceId);
+    }
+
+    return PlaybackStreamSelection(
+      mediaSourceId: info.mediaSourceId,
+      audioStreamIndex: _currentAudioStreamIndex(info),
+      subtitleStreamIndex: _currentSubtitleStreamIndex(info),
+    );
+  }
+
+  Future<bool> _shouldReportTrackSelections() async {
+    try {
+      final settings = await SettingsService.getInstance();
+      return settings.read(SettingsService.rememberTrackSelections);
+    } catch (e) {
+      appLogger.d('Could not read track-selection persistence setting; reporting selected streams', error: e);
+      return true;
+    }
+  }
+
+  int? _currentAudioStreamIndex(MediaSourceInfo info) {
+    final playerAudioTracks = player.state.tracks.audio.where((t) => t.id != 'auto' && t.id != 'no').toList();
+    if (metadata.backend == MediaBackend.jellyfin &&
+        (info.audioTracks.any((track) => track.isExternal) || playerAudioTracks.length <= 1)) {
+      final selectedSourceTrack = _selectedSourceAudioTrack(info);
+      if (selectedSourceTrack != null) return selectedSourceTrack.id;
+    }
+
+    final track = player.state.track.audio;
+    if (track == null) return null;
+
+    final ordinal = playerAudioTracks.indexOf(track);
+    if (ordinal >= 0 && ordinal < info.audioTracks.length) return info.audioTracks[ordinal].id;
+
+    final matched = findPlexTrackForMpvAudio(track, info.audioTracks, allMpvTracks: player.state.tracks.audio);
+    if (matched != null) return matched.id;
+
+    final parsedId = int.tryParse(track.id);
+    if (parsedId != null && info.audioTracks.any((t) => t.id == parsedId)) return parsedId;
+
+    return null;
+  }
+
+  MediaAudioTrack? _selectedSourceAudioTrack(MediaSourceInfo info) {
+    for (final track in info.audioTracks) {
+      if (track.selected) return track;
+    }
+    final defaultIndex = info.defaultAudioStreamIndex;
+    if (defaultIndex == null) return null;
+    for (final track in info.audioTracks) {
+      if (track.id == defaultIndex) return track;
+    }
+    return null;
+  }
+
+  int? _currentSubtitleStreamIndex(MediaSourceInfo info) {
+    final track = player.state.track.subtitle;
+    if (track == null || track.id == 'no') return -1;
+
+    if (track.isExternal && track.uri != null) {
+      for (final mediaTrack in info.subtitleTracks) {
+        final key = mediaTrack.key;
+        if (mediaTrack.isExternal && key != null && track.uri!.contains(key)) {
+          return mediaTrack.id;
+        }
+      }
+    }
+
+    final ordinal = player.state.tracks.subtitle.where((t) => t.id != 'auto' && t.id != 'no').toList().indexOf(track);
+    if (ordinal >= 0 && ordinal < info.subtitleTracks.length) return info.subtitleTracks[ordinal].id;
+
+    final matched = findPlexTrackForMpvSubtitle(track, info.subtitleTracks, allMpvTracks: player.state.tracks.subtitle);
+    if (matched != null) return matched.id;
+
+    final parsedId = int.tryParse(track.id);
+    if (parsedId != null && info.subtitleTracks.any((t) => t.id == parsedId)) return parsedId;
+
+    return null;
+  }
+
+  /// Queue progress update locally (offline mode)
+  Future<void> _sendOfflineProgress(Duration position, Duration duration) async {
+    final serverId = metadata.serverId;
+    if (serverId == null) {
+      appLogger.w('Cannot queue offline progress: serverId is null');
+      return;
+    }
+
+    await offlineWatchService!.queueProgressUpdate(
+      serverId: ServerId(serverId),
+      itemId: metadata.id,
+      viewOffset: position.inMilliseconds,
+      duration: duration.inMilliseconds,
+    );
+
+    final percent = (position.inMilliseconds / duration.inMilliseconds * 100);
+    appLogger.d(
+      'Offline progress queued: ${position.inSeconds}s / ${duration.inSeconds}s (${percent.toStringAsFixed(1)}%)',
+    );
+  }
+
+  void dispose() {
+    stopTracking();
+  }
+}

@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:width="320dp" android:height="180dp">
+        <shape><solid android:color="@color/ic_launcher_background" /></shape>
+    </item>
+    <item android:width="140dp" android:height="140dp" android:gravity="center">
+        <bitmap android:src="@drawable/plezy_brand_mark" android:gravity="fill" android:filter="true" />
+    </item>
+</layer-list>

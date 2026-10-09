@@ -1,0 +1,28 @@
+PODS:
+  - Flutter (1.0.0)
+  - os_media_controls (0.2.4):
+    - Flutter
+  - universal_gamepad (1.5.8):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - os_media_controls (from `.symlinks/plugins/os_media_controls/ios`)
+  - universal_gamepad (from `.symlinks/plugins/universal_gamepad/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  os_media_controls:
+    :path: ".symlinks/plugins/os_media_controls/ios"
+  universal_gamepad:
+    :path: ".symlinks/plugins/universal_gamepad/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  os_media_controls: 048eb9a75974191b2496d85575b6edcefc572d4e
+  universal_gamepad: 7c0cc0c2e3909dfb803d325387e42963b3ed842c
+
+PODFILE CHECKSUM: 16bb7f67e16d8aaa2bfb97666803fbfb291b6559
+
+COCOAPODS: 1.17.0

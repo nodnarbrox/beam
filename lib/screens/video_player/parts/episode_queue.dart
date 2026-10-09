@@ -1,0 +1,191 @@
+part of '../../video_player_screen.dart';
+
+extension _VideoPlayerEpisodeQueueMethods on VideoPlayerScreenState {
+  /// Ensure a play queue exists for sequential episode playback
+  Future<void> _ensurePlayQueue() async {
+    if (!mounted) return;
+    if (widget.beamEpisode != null && _currentMetadata.serverId == null) return;
+
+    // Download/offline library mode uses the local downloaded queue instead.
+    if (_offlineLibraryMode) return;
+
+    // Skip play queue for live TV (would interfere with tuner session)
+    if (widget.isLive) return;
+
+    if (!_currentMetadata.isEpisode) {
+      return;
+    }
+
+    // Plex-only — Jellyfin's local queue is published by
+    // EpisodeNavigationService._ensureLocalEpisodeQueue from
+    // _loadAdjacentEpisodes, so this method is a no-op for it.
+    if (_currentMetadata.backend != MediaBackend.plex) return;
+
+    try {
+      final client = context.getPlexClientForServer(ServerId(_currentMetadata.serverId!));
+
+      final playbackState = context.read<PlaybackStateProvider>();
+
+      // For episodes, grandparentId points to the show
+      final showRatingKey = _currentMetadata.grandparentId;
+      if (showRatingKey == null) {
+        appLogger.d('Episode missing grandparentId, skipping play queue creation');
+        return;
+      }
+
+      // Preserve any queue this item belongs to — playlist, collection,
+      // or same-show queue. `isItemInActiveQueue` is the same gate
+      // VideoPlayerScreen.initState uses; a context-key check alone would
+      // wipe a playlist queue (its key is the playlist id, not the show).
+      // Only when the active queue is genuinely stale (item not in it)
+      // do we clobber and create a fresh show queue.
+      if (playbackState.isItemInActiveQueue(_currentMetadata)) {
+        playbackState.setCurrentItem(_currentMetadata);
+        appLogger.d('Using existing play queue (context: ${playbackState.shuffleContextKey})');
+        return;
+      }
+      if (playbackState.isQueueActive) {
+        appLogger.d('Resetting stale play queue (was: ${playbackState.shuffleContextKey}, now: $showRatingKey)');
+        playbackState.clearShuffle();
+      }
+
+      appLogger.d('Creating sequential play queue for show $showRatingKey');
+      final playQueue = await client.createShowPlayQueue(
+        showRatingKey: showRatingKey,
+        shuffle: 0,
+        startingEpisodeKey: _currentMetadata.id,
+        librarySectionID: _currentMetadata.libraryId,
+        librarySectionTitle: _currentMetadata.libraryTitle,
+      );
+
+      if (playQueue != null && playQueue.items != null && playQueue.items!.isNotEmpty) {
+        await playbackState.setPlaybackFromPlayQueue(playQueue, showRatingKey);
+        playbackState.setPlayQueueWindowFetcher(
+          (id, {center, window = 50}) => client.getPlayQueue(
+            id,
+            center: center,
+            window: window,
+            librarySectionID: _currentMetadata.libraryId,
+            librarySectionTitle: _currentMetadata.libraryTitle,
+          ),
+        );
+
+        appLogger.d('Sequential play queue created with ${playQueue.items!.length} items');
+      } else {
+        appLogger.w('Plex returned no usable sequential play queue; falling back to a local series queue');
+      }
+    } catch (e, st) {
+      appLogger.w('Could not create Plex play queue; falling back to a local series queue', error: e, stackTrace: st);
+    }
+  }
+
+  Future<AdjacentEpisodes> _loadAdjacentEpisodes({MediaItem? metadata, _PlaybackAttempt? attempt}) async {
+    if (!mounted || widget.isLive) return const AdjacentEpisodes.unavailable();
+
+    final targetMetadata = metadata ?? _currentMetadata;
+    final beam = widget.beamEpisode;
+    if (beam != null && beam.episodeQueue.isNotEmpty) {
+      final queue = List<MediaItem>.of(beam.episodeQueue)..sort(compareEpisodesByWatchOrder);
+      final index = queue.indexWhere(
+        (e) => e.parentIndex == targetMetadata.parentIndex && e.index == targetMetadata.index,
+      );
+      // Owned entries retain their server's authoritative multi-episode file
+      // membership even when the surrounding queue contains virtual episodes.
+      // Prefer the opened metadata when it has richer part information.
+      if (index >= 0 && targetMetadata.mediaVersions?.isNotEmpty == true) queue[index] = targetMetadata;
+      final playedPartId = widget.directVideoUrl == null ? _currentMediaInfo?.partId?.toString() : null;
+      final next = index < 0
+          ? null
+          : widget.directVideoUrl != null
+          ? (index + 1 < queue.length ? queue[index + 1] : null)
+          : nextEpisodeSkippingSameFile(queue, index, playedPartId: playedPartId);
+      final previous = index < 0
+          ? null
+          : widget.directVideoUrl != null
+          ? (index > 0 ? queue[index - 1] : null)
+          : previousEpisodeSkippingSameFile(queue, index, playedPartId: playedPartId);
+      final adjacent = index < 0
+          ? const AdjacentEpisodes.failed()
+          : AdjacentEpisodes(
+              next: next,
+              previous: previous,
+              nextStatus: next != null ? QueueNavigationStatus.found : QueueNavigationStatus.boundary,
+              previousStatus: previous != null ? QueueNavigationStatus.found : QueueNavigationStatus.boundary,
+            );
+      _commitAdjacentEpisodes(targetMetadata, adjacent, attempt);
+      return adjacent;
+    }
+    if (beam != null && targetMetadata.serverId == null) {
+      const unavailable = AdjacentEpisodes.unavailable();
+      _commitAdjacentEpisodes(targetMetadata, unavailable, attempt);
+      return unavailable;
+    }
+    try {
+      final adjacentEpisodes = _offlineLibraryMode
+          ? _loadAdjacentEpisodesOffline(targetMetadata)
+          : await _episodeNavigation.loadAdjacentEpisodes(
+              context: context,
+              metadata: targetMetadata,
+              // The part actually being played, so the queue can skip sibling
+              // entries of a Plex multi-episode file (#1500). MediaSourceInfo
+              // carries the Plex numeric part id; MediaPart.id is its string form.
+              playedPartId: _currentMediaInfo?.partId?.toString(),
+            );
+      _commitAdjacentEpisodes(targetMetadata, adjacentEpisodes, attempt);
+      return adjacentEpisodes;
+    } catch (e, st) {
+      appLogger.w('Could not load adjacent episodes', error: e, stackTrace: st);
+      const failed = AdjacentEpisodes.failed();
+      _commitAdjacentEpisodes(targetMetadata, failed, attempt);
+      return failed;
+    }
+  }
+
+  /// Load next/previous episodes from locally downloaded content.
+  AdjacentEpisodes _loadAdjacentEpisodesOffline(MediaItem metadata) {
+    if (!metadata.isEpisode) return const AdjacentEpisodes.unavailable();
+
+    final showKey = metadata.grandparentId;
+    if (showKey == null) return const AdjacentEpisodes.unavailable();
+
+    try {
+      final downloadProvider = context.read<DownloadProvider>();
+      final episodes = downloadProvider.getDownloadedEpisodesForShow(showKey);
+      if (episodes.isEmpty) return const AdjacentEpisodes.failed();
+
+      // Aired watch order (Specials interleaved by air date) — the shared
+      // episode order, so offline next/prev matches streaming, what "download
+      // next N" selects, and the offline OnDeck list (#1416/#1414). Copy first
+      // so the provider's cached list isn't reordered.
+      final sorted = List<MediaItem>.from(episodes)..sort(compareEpisodesByWatchOrder);
+      final currentIdx = sorted.indexWhere((ep) => ep.id == metadata.id);
+      if (currentIdx == -1) return const AdjacentEpisodes.failed();
+
+      // Same-file siblings are skipped by file-path intersection of the
+      // stored metadata (#1500) — offline media info doesn't carry the
+      // server part id, so the helpers compare the items' own parts.
+      final previous = previousEpisodeSkippingSameFile(sorted, currentIdx);
+      final next = nextEpisodeSkippingSameFile(sorted, currentIdx);
+      return AdjacentEpisodes(
+        next: next,
+        previous: previous,
+        nextStatus: next == null ? QueueNavigationStatus.boundary : QueueNavigationStatus.found,
+        previousStatus: previous == null ? QueueNavigationStatus.boundary : QueueNavigationStatus.found,
+      );
+    } catch (e, st) {
+      appLogger.w('Could not load offline adjacent episodes', error: e, stackTrace: st);
+      return const AdjacentEpisodes.failed();
+    }
+  }
+
+  void _commitAdjacentEpisodes(MediaItem targetMetadata, AdjacentEpisodes adjacentEpisodes, _PlaybackAttempt? attempt) {
+    if (!mounted || _currentMetadata.globalKey != targetMetadata.globalKey || (attempt != null && !attempt.isCurrent)) {
+      return;
+    }
+    _setPlayerState(() {
+      _nextEpisode = adjacentEpisodes.next;
+      _previousEpisode = adjacentEpisodes.previous;
+      _nextEpisodeStatus = adjacentEpisodes.nextStatus;
+    });
+  }
+}

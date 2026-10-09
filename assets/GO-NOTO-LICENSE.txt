@@ -1,0 +1,13 @@
+Go Noto Current Regular
+Source project: https://github.com/satbyy/go-noto-universal
+SHA-256: 882afbab965608c2d2bc627fd8016b962aa5a6be2d358f9de24a7b5967c5632e
+
+Embedded copyright
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+
+Embedded license
+This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://scripts.sil.org/OFL
+
+Embedded license URL
+https://scripts.sil.org/OFL
+

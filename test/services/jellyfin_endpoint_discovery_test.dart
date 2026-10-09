@@ -1,0 +1,409 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:plezy/exceptions/media_server_exceptions.dart';
+import 'package:plezy/services/jellyfin_endpoint_discovery.dart';
+
+http.Response _info({required String id, String name = 'Home'}) => http.Response(
+  jsonEncode({'Id': id, 'ServerName': name, 'Version': '10.9.0'}),
+  200,
+  headers: {'content-type': 'application/json'},
+);
+
+class _RedirectedInfoClient extends http.BaseClient {
+  _RedirectedInfoClient(this.resolveUrl);
+
+  final Uri Function(Uri requestedUrl) resolveUrl;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    await request.finalize().drain<void>();
+    return _ResponseWithUrl(
+      Stream<List<int>>.value(utf8.encode(jsonEncode({'Id': 'srv-1', 'ServerName': 'Home', 'Version': '10.11.11'}))),
+      200,
+      url: resolveUrl(request.url),
+      request: request,
+      headers: const {'content-type': 'application/json'},
+    );
+  }
+}
+
+class _ResponseWithUrl extends http.StreamedResponse implements http.BaseResponseWithUrl {
+  _ResponseWithUrl(super.stream, super.statusCode, {required this.url, super.request, super.headers});
+
+  @override
+  final Uri url;
+}
+
+void main() {
+  group('JellyfinEndpointDiscovery', () {
+    test('normalizes and deduplicates endpoint URLs', () {
+      expect(
+        JellyfinEndpointDiscovery.normalizeBaseUrls([
+          ' https://jf.example.com/ ',
+          'https://jf.example.com',
+          '',
+          'https://jf.lan:8096/',
+        ]),
+        ['https://jf.example.com', 'https://jf.lan:8096'],
+      );
+      expect(JellyfinEndpointDiscovery.normalizeBaseUrl('jf.example.com/'), 'jf.example.com');
+    });
+
+    test('expands bare host input into Jellyfin URL candidates', () {
+      expect(JellyfinEndpointDiscovery.expandInputToBaseUrls('jf.example.com'), [
+        'http://jf.example.com:8096',
+        'https://jf.example.com',
+        'https://jf.example.com:8096',
+        'http://jf.example.com',
+      ]);
+    });
+
+    test('expands host and port input without changing the port', () {
+      expect(JellyfinEndpointDiscovery.expandInputToBaseUrls('192.0.2.10:8096'), [
+        'http://192.0.2.10:8096',
+        'https://192.0.2.10:8096',
+      ]);
+    });
+
+    test('races expanded bare host candidates', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((req) async {
+          if (req.url.scheme == 'http' && req.url.host == 'jf.example.com' && req.url.port == 8096) {
+            return _info(id: 'srv-1');
+          }
+          throw TimeoutException('offline');
+        }),
+      );
+      final input = JellyfinEndpointDiscovery.buildUserInputCandidates(['jf.example.com']);
+
+      final result = await discovery.raceEndpoints(
+        input.probeBaseUrls,
+        baseUrlsToPersist: input.explicitBaseUrls,
+        baseUrlValidationGroups: input.validationBaseUrlGroups,
+      );
+
+      expect(result.activeBaseUrl, 'http://jf.example.com:8096');
+      expect(result.baseUrls, ['http://jf.example.com:8096']);
+    });
+
+    test('does not persist failed shorthand guesses as failover URLs', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((req) async {
+          if (req.url.scheme == 'http' && req.url.host == '192.0.2.10' && req.url.port == 8096) {
+            return _info(id: 'srv-1');
+          }
+          throw TimeoutException('offline');
+        }),
+      );
+      final input = JellyfinEndpointDiscovery.buildUserInputCandidates(['192.0.2.10']);
+
+      final result = await discovery.raceEndpoints(
+        input.probeBaseUrls,
+        baseUrlsToPersist: input.explicitBaseUrls,
+        baseUrlValidationGroups: input.validationBaseUrlGroups,
+      );
+
+      expect(result.baseUrls, ['http://192.0.2.10:8096']);
+    });
+
+    test('does not reject different servers found only through shorthand guesses', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((req) async {
+          if (req.url.scheme == 'http' && req.url.host == 'jf.example.com' && req.url.port == 8096) {
+            return _info(id: 'srv-1');
+          }
+          if (req.url.scheme == 'https' && req.url.host == 'jf.example.com' && !req.url.hasPort) {
+            return _info(id: 'srv-2');
+          }
+          throw TimeoutException('offline');
+        }),
+      );
+      final input = JellyfinEndpointDiscovery.buildUserInputCandidates(['jf.example.com']);
+
+      final result = await discovery.raceEndpoints(
+        input.probeBaseUrls,
+        baseUrlsToPersist: input.explicitBaseUrls,
+        baseUrlValidationGroups: input.validationBaseUrlGroups,
+      );
+
+      expect(result.baseUrls, [result.activeBaseUrl]);
+    });
+
+    test('rejects different servers reached from separate shorthand entries', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((req) async {
+          if (req.url.scheme == 'http' && req.url.host == 'one.example.com' && req.url.port == 8096) {
+            return _info(id: 'srv-1');
+          }
+          if (req.url.scheme == 'http' && req.url.host == 'two.example.com' && req.url.port == 8096) {
+            return _info(id: 'srv-2');
+          }
+          throw TimeoutException('offline');
+        }),
+      );
+      final input = JellyfinEndpointDiscovery.buildUserInputCandidates(['one.example.com', 'two.example.com']);
+
+      await expectLater(
+        discovery.raceEndpoints(
+          input.probeBaseUrls,
+          baseUrlsToPersist: input.explicitBaseUrls,
+          baseUrlValidationGroups: input.validationBaseUrlGroups,
+        ),
+        throwsA(isA<MediaServerUrlException>()),
+      );
+    });
+
+    test('persists explicit URLs while probing without authentication', () async {
+      final probeRequests = <http.Request>[];
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((req) async {
+          probeRequests.add(req);
+          if (req.url.host == 'offline.example.com') {
+            throw TimeoutException('offline');
+          }
+          return _info(id: 'srv-1');
+        }),
+      );
+      final input = JellyfinEndpointDiscovery.buildUserInputCandidates([
+        'https://offline.example.com',
+        'https://jf.example.com',
+      ]);
+
+      final result = await discovery.raceEndpoints(
+        input.probeBaseUrls,
+        baseUrlsToPersist: input.explicitBaseUrls,
+        baseUrlValidationGroups: input.validationBaseUrlGroups,
+      );
+
+      expect(result.activeBaseUrl, 'https://jf.example.com');
+      expect(result.baseUrls, ['https://jf.example.com', 'https://offline.example.com']);
+      expect(probeRequests, isNotEmpty);
+      for (final request in probeRequests) {
+        final headerNames = request.headers.keys.map((name) => name.toLowerCase());
+        expect(headerNames, isNot(contains('authorization')));
+        expect(headerNames, isNot(contains('x-emby-token')));
+        expect(request.url.queryParameters.keys.map((name) => name.toLowerCase()), isNot(contains('api_key')));
+      }
+    });
+
+    test('races URLs and selects the lowest-latency reachable endpoint', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((req) async {
+          if (req.url.host == 'slow.example.com') {
+            await Future<void>.delayed(const Duration(milliseconds: 35));
+          } else {
+            await Future<void>.delayed(const Duration(milliseconds: 1));
+          }
+          return _info(id: 'srv-1');
+        }),
+      );
+
+      final result = await discovery.raceEndpoints(['https://slow.example.com', 'https://fast.example.com']);
+
+      expect(result.activeBaseUrl, 'https://fast.example.com');
+      expect(result.baseUrls, ['https://fast.example.com', 'https://slow.example.com']);
+      expect(result.serverInfo.machineId, 'srv-1');
+    });
+
+    test('an unreachable persisted endpoint survives a save', () async {
+      const offlineUrl = 'https://offline.example.com';
+      const activeUrl = 'https://jf.example.com';
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((request) async {
+          if (request.url.host == 'offline.example.com') {
+            throw TimeoutException('offline');
+          }
+          return _info(id: 'srv-1');
+        }),
+      );
+
+      final result = await discovery.raceEndpoints([offlineUrl, activeUrl], baseUrlsToPersist: [offlineUrl, activeUrl]);
+
+      expect(result.activeBaseUrl, activeUrl);
+      expect(result.baseUrls, [activeUrl, offlineUrl]);
+    });
+
+    test('a different-machine persisted endpoint remains excluded', () async {
+      const activeUrl = 'https://jf.example.com';
+      const differentMachineUrl = 'https://other.example.com';
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () =>
+            MockClient((request) async => _info(id: request.url.host == 'other.example.com' ? 'srv-2' : 'srv-1')),
+      );
+
+      final result = await discovery.raceEndpoints(
+        [activeUrl, differentMachineUrl],
+        expectedMachineId: 'srv-1',
+        baseUrlsToPersist: [activeUrl, differentMachineUrl],
+        baseUrlsToValidate: const [],
+      );
+
+      expect(result.activeBaseUrl, activeUrl);
+      expect(result.baseUrls, [activeUrl]);
+      expect(result.reconcilePreviouslyStoredBaseUrls([activeUrl, differentMachineUrl]), [activeUrl]);
+    });
+
+    test('rejects reachable URLs that point to different Jellyfin servers', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((req) async {
+          return _info(id: req.url.host == 'one.example.com' ? 'srv-1' : 'srv-2');
+        }),
+      );
+
+      await expectLater(
+        discovery.raceEndpoints(['https://one.example.com', 'https://two.example.com']),
+        throwsA(isA<MediaServerUrlException>()),
+      );
+    });
+
+    test('rejects URLs that do not match an expected existing server id', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((_) async => _info(id: 'srv-2')),
+      );
+
+      await expectLater(
+        discovery.raceEndpoints(['https://jf.example.com'], expectedMachineId: 'srv-1'),
+        throwsA(isA<MediaServerUrlException>()),
+      );
+    });
+
+    test('expected machine ID retains candidates that returned no identity', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((request) async {
+          if (request.url.host == 'offline.example.com') {
+            throw TimeoutException('offline');
+          }
+          return _info(id: 'srv-1');
+        }),
+      );
+
+      final result = await discovery.raceEndpoints([
+        'https://matching.example.com',
+        'https://offline.example.com',
+      ], expectedMachineId: 'srv-1');
+
+      expect(result.activeBaseUrl, 'https://matching.example.com');
+      expect(result.baseUrls, ['https://matching.example.com', 'https://offline.example.com']);
+    });
+
+    test('reconciles stored endpoints without pruning candidates that returned no identity', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((request) async {
+          if (request.url.host == 'offline.example.com') {
+            throw TimeoutException('offline');
+          }
+          return _info(id: request.url.host == 'wrong.example.com' ? 'srv-2' : 'srv-1');
+        }),
+      );
+      const storedBaseUrls = ['https://active.example.com', 'https://offline.example.com', 'https://wrong.example.com'];
+
+      final result = await discovery.raceEndpoints(
+        storedBaseUrls,
+        expectedMachineId: 'srv-1',
+        baseUrlsToValidate: const [],
+      );
+
+      expect(result.baseUrls, ['https://active.example.com', 'https://offline.example.com']);
+      expect(result.reconcilePreviouslyStoredBaseUrls(storedBaseUrls), [
+        'https://active.example.com',
+        'https://offline.example.com',
+      ]);
+    });
+
+    test('waits for a late phase-one identity before filtering persisted fallbacks', () async {
+      final allowLateIdentity = Completer<void>();
+      final lateProbeStarted = Completer<void>();
+      final phaseTwoFallbackFinished = Completer<void>();
+      var fallbackRequests = 0;
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => MockClient((request) async {
+          if (request.url.host != 'fallback.example.com') {
+            return _info(id: 'srv-1');
+          }
+          fallbackRequests++;
+          if (fallbackRequests == 1) {
+            lateProbeStarted.complete();
+            await allowLateIdentity.future;
+            return _info(id: 'srv-1');
+          }
+          phaseTwoFallbackFinished.complete();
+          throw TimeoutException('phase-two fallback probe failed');
+        }),
+      );
+
+      var raceCompleted = false;
+      final raceFuture = discovery
+          .raceEndpoints(['https://active.example.com', 'https://fallback.example.com'], expectedMachineId: 'srv-1')
+          .then((result) {
+            raceCompleted = true;
+            return result;
+          });
+
+      await lateProbeStarted.future;
+      await phaseTwoFallbackFinished.future;
+      await Future<void>.delayed(Duration.zero);
+      expect(raceCompleted, isFalse);
+
+      allowLateIdentity.complete();
+      final result = await raceFuture;
+      expect(result.activeBaseUrl, 'https://active.example.com');
+      expect(result.baseUrls, ['https://active.example.com', 'https://fallback.example.com']);
+    });
+
+    test('promotes a same-host HTTPS redirect before persisting the endpoint', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => _RedirectedInfoClient((requestedUrl) => requestedUrl.replace(scheme: 'https')),
+      );
+
+      final result = await discovery.raceEndpoints(
+        ['http://jf.example.com'],
+        baseUrlsToPersist: ['http://jf.example.com'],
+      );
+
+      expect(result.activeBaseUrl, 'https://jf.example.com');
+      expect(result.baseUrls, ['https://jf.example.com']);
+      expect(result.reconcilePreviouslyStoredBaseUrls(['http://jf.example.com']), ['https://jf.example.com']);
+    });
+
+    test('preserves a Jellyfin base path when promoting a redirect', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => _RedirectedInfoClient((requestedUrl) => requestedUrl.replace(scheme: 'https')),
+      );
+
+      final result = await discovery.raceEndpoints(
+        ['http://jf.example.com/jellyfin'],
+        baseUrlsToPersist: ['http://jf.example.com/jellyfin'],
+      );
+
+      expect(result.activeBaseUrl, 'https://jf.example.com/jellyfin');
+      expect(result.baseUrls, ['https://jf.example.com/jellyfin']);
+    });
+
+    test('rejects a probe redirect to a different host', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () =>
+            _RedirectedInfoClient((requestedUrl) => requestedUrl.replace(scheme: 'https', host: 'login.example.com')),
+      );
+
+      await expectLater(
+        discovery.probe('http://jf.example.com'),
+        throwsA(isA<MediaServerUrlException>().having((error) => error.message, 'message', contains('different host'))),
+      );
+    });
+
+    test('rejects a probe redirect that downgrades HTTPS', () async {
+      final discovery = JellyfinEndpointDiscovery(
+        testHttpClientFactory: () => _RedirectedInfoClient((requestedUrl) => requestedUrl.replace(scheme: 'http')),
+      );
+
+      await expectLater(
+        discovery.probe('https://jf.example.com'),
+        throwsA(isA<MediaServerUrlException>().having((error) => error.message, 'message', contains('insecure URL'))),
+      );
+    });
+  });
+}

@@ -1,0 +1,470 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:plezy/media/ids.dart';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:plezy/database/app_database.dart';
+import 'package:plezy/exceptions/media_server_exceptions.dart';
+import 'package:plezy/media/media_server_client.dart';
+import 'package:plezy/models/media_subscription.dart';
+import 'package:plezy/models/plex/plex_config.dart';
+import 'package:plezy/services/plex_api_cache.dart';
+import 'package:plezy/services/plex_client.dart';
+import 'package:plezy/utils/active_client_scope.dart';
+
+void main() {
+  late AppDatabase db;
+
+  setUp(() async {
+    db = AppDatabase.forTesting(NativeDatabase.memory());
+    PlexApiCache.initialize(db);
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  PlexClient makeClient(
+    Future<http.Response> Function(http.Request request) handler, {
+    String token = 'tok',
+    String clientIdentifier = 'client',
+    List<({String identifier, String gridEndpoint})> epgProviders = const [
+      (identifier: 'provider-a', gridEndpoint: '/provider-a/grid'),
+    ],
+  }) {
+    return PlexClient.forTesting(
+      config: PlexConfig(
+        baseUrl: 'https://plex.example.com',
+        token: token,
+        clientIdentifier: clientIdentifier,
+        product: 'Plezy',
+        version: '1',
+        machineIdentifier: 'machine-1',
+      ),
+      serverId: ServerId('machine-1'),
+      profileScopeId: buildPlexProfileScopeId(serverId: ServerId('machine-1'), profileId: 'profile-a'),
+      httpClient: MockClient(handler),
+      epgProviders: epgProviders,
+    );
+  }
+
+  http.Response jsonResponse(Map<String, dynamic> body) {
+    return http.Response(jsonEncode(body), 200, headers: const {'content-type': 'application/json'});
+  }
+
+  test('favorite source follows requested lineup provider', () async {
+    final client = makeClient(
+      (_) async => http.Response('{}', 200),
+      epgProviders: const [
+        (identifier: 'provider-a', gridEndpoint: '/provider-a/grid'),
+        (identifier: 'provider-b', gridEndpoint: '/provider-b/grid'),
+      ],
+    );
+    addTearDown(client.close);
+
+    expect(await client.liveTv.buildFavoriteChannelSource(lineup: 'provider-b'), 'server://machine-1/provider-b');
+  });
+
+  test('XMLTV DVR lineup scopes channels and guide source to its own provider', () async {
+    const lineup = 'lineup://tv.plex.providers.epg.xmltv/http%3A%2F%2Frelay%2Fguide.xml#Columbus';
+    final channelRequests = <String>[];
+    final client = makeClient((request) async {
+      if (request.url.path == '/livetv/dvrs') {
+        return jsonResponse({'MediaContainer': {'Dvr': [{'key': '42', 'lineup': lineup}]}});
+      }
+      channelRequests.add(request.url.path);
+      if (request.url.path == '/tv.plex.providers.epg.xmltv:42/lineups/dvr/channels') {
+        return jsonResponse({'MediaContainer': {'Channel': [{'id': '1', 'title': 'ABC Columbus', 'vcn': '1'}]}});
+      }
+      return jsonResponse({'MediaContainer': {}});
+    }, epgProviders: const [
+      (identifier: 'tv.plex.providers.epg.xmltv:28', gridEndpoint: '/tv.plex.providers.epg.xmltv:28/grid'),
+      (identifier: 'tv.plex.providers.epg.xmltv:42', gridEndpoint: '/tv.plex.providers.epg.xmltv:42/grid'),
+    ]);
+    addTearDown(client.close);
+    await client.liveTvDvr!.fetchDvrs();
+    expect(await client.liveTv.buildFavoriteChannelSource(lineup: lineup), 'server://machine-1/tv.plex.providers.epg.xmltv:42');
+    final channels = await client.liveTv.fetchChannels(lineup: lineup);
+    expect(channels.single.title, 'ABC Columbus');
+    expect(channelRequests, isNot(contains('/tv.plex.providers.epg.xmltv:28/lineups/dvr/channels')));
+  });
+
+  test('favorite store is account device scoped instead of token scoped', () {
+    final a = makeClient(
+      (_) async => http.Response('{}', 200),
+      token: 'server-token-a',
+      clientIdentifier: 'account-device',
+    );
+    final b = makeClient(
+      (_) async => http.Response('{}', 200),
+      token: 'server-token-b',
+      clientIdentifier: 'account-device',
+    );
+    addTearDown(a.close);
+    addTearDown(b.close);
+
+    expect(a.liveTv.favoriteStoreKey, b.liveTv.favoriteStoreKey);
+  });
+
+  test('favorite read preserves a successful empty response', () async {
+    final client = makeClient((request) async {
+      expect(request.url.path, '/settings/favoriteChannels');
+      return jsonResponse({'MediaContainer': <String, dynamic>{}});
+    });
+    addTearDown(client.close);
+
+    await expectLater(client.liveTv.fetchFavoriteChannels(), completion(isEmpty));
+  });
+
+  test('favorite read propagates HTTP errors', () async {
+    final client = makeClient((request) async {
+      expect(request.url.path, '/settings/favoriteChannels');
+      return http.Response('service unavailable', 503);
+    });
+    addTearDown(client.close);
+
+    await expectLater(
+      client.liveTv.fetchFavoriteChannels(),
+      throwsA(isA<MediaServerHttpException>().having((error) => error.statusCode, 'statusCode', 503)),
+    );
+  });
+
+  test('favorite write propagates HTTP errors to the mutation caller', () async {
+    final requestStarted = Completer<void>();
+    final releaseResponse = Completer<void>();
+    final client = makeClient((request) async {
+      expect(request.method, 'PUT');
+      expect(request.url.path, '/settings/favoriteChannels');
+      requestStarted.complete();
+      await releaseResponse.future;
+      return http.Response('service unavailable', 503);
+    });
+    addTearDown(client.close);
+
+    final mutation = client.liveTv.setFavoriteChannels(const []);
+    await requestStarted.future;
+    releaseResponse.complete();
+
+    await expectLater(
+      mutation,
+      throwsA(isA<MediaServerHttpException>().having((error) => error.statusCode, 'statusCode', 503)),
+    );
+  });
+
+  test('DVR list applies root channel mapping to each DVR and parses string numbers', () async {
+    final client = makeClient((request) async {
+      expect(request.url.path, '/livetv/dvrs');
+      return jsonResponse({
+        'MediaContainer': {
+          'Dvr': [
+            {'key': '1', 'uuid': 'dvr-1', 'tuners': '2', 'status': '1'},
+          ],
+          'ChannelMapping': [
+            {'channelKey': 'ch-1', 'enabled': '1', 'lineupIdentifier': '001'},
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+
+    final dvrs = await client.liveTvDvr!.fetchDvrs();
+
+    expect(dvrs, hasLength(1));
+    expect(dvrs.single.tuners, 2);
+    expect(dvrs.single.status, 1);
+    expect(dvrs.single.channelMappings.single.channelKey, 'ch-1');
+    expect(dvrs.single.channelMappings.single.enabled, isTrue);
+  });
+
+  test('DVR device mappings stay scoped to their own lineup and override root fallback', () async {
+    final client = makeClient((request) async {
+      expect(request.url.path, '/livetv/dvrs');
+      return jsonResponse({
+        'MediaContainer': {
+          'Dvr': [
+            {
+              'key': '28',
+              'Device': [
+                {
+                  'ChannelMapping': [
+                    {'channelKey': '4.1', 'enabled': '1'},
+                  ],
+                },
+                {
+                  'ChannelMapping': {'channelKey': '6.1', 'enabled': '0'},
+                },
+              ],
+            },
+            {
+              'key': '31',
+              'Device': {
+                'ChannelMapping': [
+                  {'channelKey': '1147', 'enabled': '1'},
+                ],
+              },
+            },
+            {
+              'key': '32',
+              'ChannelMapping': [
+                {'channelKey': 'direct', 'enabled': '1'},
+              ],
+              'Device': {
+                'ChannelMapping': [
+                  {'channelKey': 'ignored', 'enabled': '1'},
+                ],
+              },
+            },
+          ],
+          'ChannelMapping': [
+            {'channelKey': 'root', 'enabled': '1'},
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+    final dvrs = await client.liveTvDvr!.fetchDvrs();
+    expect(dvrs, hasLength(3));
+    expect(dvrs[0].channelMappings.map((mapping) => mapping.channelKey), ['4.1', '6.1']);
+    expect(dvrs[0].channelMappings.map((mapping) => mapping.enabled), [true, false]);
+    expect(dvrs[1].channelMappings.single.channelKey, '1147');
+    expect(dvrs[1].channelMappings.single.enabled, isTrue);
+    expect(dvrs[2].channelMappings.single.channelKey, 'direct');
+  });
+
+  test('subscription template parses settings and URL-encoded enum labels', () async {
+    final client = makeClient((request) async {
+      expect(request.url.path, '/media/subscriptions/template');
+      expect(request.url.queryParameters['guid'], 'plex://episode/1');
+      return jsonResponse({
+        'MediaContainer': {
+          'SubscriptionTemplate': [
+            {
+              'MediaSubscription': [
+                {
+                  'key': '',
+                  'type': 4,
+                  'selected': '1',
+                  'title': 'This Episode',
+                  'parameters': 'hints%5Bguid%5D=plex%3A%2F%2Fepisode%2F1',
+                  'Setting': [
+                    {'id': 'startTimeslot', 'type': 'int', 'value': '-1', 'enumValues': ':Any|1715319000:12%3A30%20AM'},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+
+    final templates = await client.liveTvDvr!.getSubscriptionTemplate('plex://episode/1');
+
+    final subscription = templates.single.subscriptions.single;
+    expect(subscription.selected, isTrue);
+    expect(subscription.parameters, contains('hints%5Bguid%5D'));
+    expect(subscription.settings.single.options.map((o) => o.label), ['Any', '12:30 AM']);
+  });
+
+  test('createRecordingRule preserves template parameters and all prefs as query params', () async {
+    late http.Request captured;
+    final client = makeClient((request) async {
+      captured = request;
+      return jsonResponse({
+        'MediaContainer': {
+          'MediaSubscription': [
+            {'key': '18', 'type': 4, 'title': 'Episode'},
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+
+    final request = MediaSubscriptionCreateRequest.fromTemplate(
+      const MediaSubscription(
+        key: '',
+        targetLibrarySectionID: 2,
+        type: 4,
+        parameters: 'hints%5Bguid%5D=plex%3A%2F%2Fepisode%2F1',
+        settings: [
+          SubscriptionSetting(id: 'oneShot', value: 'true', defaultValue: 'false', hidden: true),
+          SubscriptionSetting(id: 'remoteMedia', value: 'false', defaultValue: 'false', hidden: true),
+          SubscriptionSetting(id: 'startOffsetMinutes', value: '0', defaultValue: '0'),
+        ],
+      ),
+      prefs: const {'startOffsetMinutes': 5},
+    );
+
+    final created = await client.liveTvDvr!.createRecordingRule(request);
+
+    expect(captured.method, 'POST');
+    expect(captured.url.path, '/media/subscriptions');
+    expect(captured.body, isEmpty);
+    expect(captured.headers.containsKey('content-type'), isFalse);
+    expect(captured.url.queryParameters['hints[guid]'], 'plex://episode/1');
+    expect(captured.url.queryParameters['targetLibrarySectionID'], '2');
+    expect(captured.url.queryParameters['type'], '4');
+    expect(captured.url.queryParameters['prefs[oneShot]'], 'true');
+    expect(captured.url.queryParameters['prefs[remoteMedia]'], 'false');
+    expect(captured.url.queryParameters['prefs[startOffsetMinutes]'], '5');
+    expect(created?.key, '18');
+  });
+
+  test('fromTemplate section override drops the template location id', () async {
+    late http.Request captured;
+    final client = makeClient((request) async {
+      captured = request;
+      return jsonResponse({
+        'MediaContainer': {
+          'MediaSubscription': [
+            {'key': '18', 'type': 4, 'title': 'Episode'},
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+
+    const template = MediaSubscription(key: '', targetLibrarySectionID: 2, targetSectionLocationID: 7, type: 4);
+
+    final overridden = MediaSubscriptionCreateRequest.fromTemplate(template, targetLibrarySectionID: 5);
+    expect(overridden.targetLibrarySectionID, 5);
+    expect(overridden.targetSectionLocationID, isNull);
+
+    await client.liveTvDvr!.createRecordingRule(overridden);
+    expect(captured.url.queryParameters['targetLibrarySectionID'], '5');
+    expect(captured.url.queryParameters.containsKey('targetSectionLocationID'), isFalse);
+  });
+
+  test('fromTemplate without override keeps template section and location', () {
+    const template = MediaSubscription(key: '', targetLibrarySectionID: 2, targetSectionLocationID: 7, type: 4);
+
+    final request = MediaSubscriptionCreateRequest.fromTemplate(template);
+    expect(request.targetLibrarySectionID, 2);
+    expect(request.targetSectionLocationID, 7);
+
+    // Same-section override is a no-op: the template location still applies.
+    final sameSection = MediaSubscriptionCreateRequest.fromTemplate(template, targetLibrarySectionID: 2);
+    expect(sameSection.targetSectionLocationID, 7);
+  });
+
+  test('updateRecordingRule sends prefs as query params', () async {
+    late http.Request captured;
+    final client = makeClient((request) async {
+      captured = request;
+      return jsonResponse({
+        'MediaContainer': {
+          'MediaSubscription': [
+            {'key': '18', 'type': 4, 'title': 'Episode'},
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+
+    final updated = await client.liveTvDvr!.updateRecordingRule('18', const {'startOffsetMinutes': 5});
+
+    expect(captured.method, 'PUT');
+    expect(captured.url.path, '/media/subscriptions/18');
+    expect(captured.body, isEmpty);
+    expect(captured.url.queryParameters['prefs[startOffsetMinutes]'], '5');
+    expect(updated?.key, '18');
+  });
+
+  test('recording rules parse active grab operation metadata', () async {
+    late http.Request captured;
+    final client = makeClient((request) async {
+      captured = request;
+      return jsonResponse({
+        'MediaContainer': {
+          'MediaSubscription': [
+            {
+              'key': '18',
+              'type': 4,
+              'title': 'Episode',
+              'MediaGrabOperation': [
+                {
+                  'id': 'grab-active',
+                  'status': 'grabbing',
+                  'Metadata': {
+                    'title': 'Live Episode',
+                    'ratingKey': 'episode-1',
+                    'guid': 'plex://episode/1',
+                    'Media': [
+                      {'beginsAt': '1466060400', 'endsAt': '1466062200', 'channelIdentifier': '004'},
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+
+    final rules = await client.liveTvDvr!.fetchRecordingRules(includeGrabs: true, includeStorage: false);
+
+    expect(captured.url.path, '/media/subscriptions');
+    expect(captured.url.queryParameters['includeGrabs'], '1');
+    expect(captured.url.queryParameters['includeStorage'], '0');
+    final grab = rules.single.grabOperations.single;
+    expect(grab.status, 'grabbing');
+    expect(grab.program?.ratingKey, 'episode-1');
+    expect(grab.program?.guid, 'plex://episode/1');
+    expect(grab.program?.channelIdentifier, '004');
+  });
+
+  test('cancelGrab deletes the operation key path', () async {
+    late http.Request captured;
+    final client = makeClient((request) async {
+      captured = request;
+      return jsonResponse({'MediaContainer': <String, dynamic>{}});
+    });
+    addTearDown(client.close);
+
+    await client.liveTvDvr!.cancelGrab('/media/grabbers/operations/grab-1');
+
+    expect(captured.method, 'DELETE');
+    expect(captured.url.path, '/media/grabbers/operations/grab-1');
+  });
+
+  test('scheduled recordings parse grab operation metadata', () async {
+    final client = makeClient((request) async {
+      expect(request.url.path, '/media/subscriptions/scheduled');
+      return jsonResponse({
+        'MediaContainer': {
+          'MediaGrabOperation': [
+            {
+              'id': 'grab-1',
+              'key': '/media/grabbers/operations/grab-1',
+              'mediaSubscriptionID': '7',
+              'status': 'scheduled',
+              'percent': '42.5',
+              'Metadata': {
+                'title': 'Miracle on Dead Street',
+                'grandparentTitle': 'Fresh Off the Boat',
+                'type': 'episode',
+                'Media': [
+                  {'beginsAt': '1466060400', 'endsAt': '1466062200', 'channelIdentifier': '004'},
+                ],
+              },
+            },
+          ],
+        },
+      });
+    });
+    addTearDown(client.close);
+
+    final operations = await client.liveTvDvr!.fetchScheduledRecordings();
+
+    expect(operations.single.id, 'grab-1');
+    expect(operations.single.operationKey, '/media/grabbers/operations/grab-1');
+    expect(operations.single.mediaSubscriptionID, 7);
+    expect(operations.single.percent, 42.5);
+    expect(operations.single.program?.grandparentTitle, 'Fresh Off the Boat');
+    expect(operations.single.program?.channelIdentifier, '004');
+  });
+}

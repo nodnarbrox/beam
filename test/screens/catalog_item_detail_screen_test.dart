@@ -1,0 +1,977 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:plezy/services/network_artwork_provider.dart';
+import 'package:plezy/focus/focusable_action_bar.dart';
+import 'package:plezy/i18n/strings.g.dart';
+import 'package:plezy/media/media_kind.dart';
+import 'package:plezy/media/media_item.dart';
+import 'package:plezy/models/catalog/catalog_cast_member.dart';
+import 'package:plezy/models/catalog/catalog_item.dart';
+import 'package:plezy/models/catalog/catalog_metadata.dart';
+import 'package:plezy/providers/catalog_sources_provider.dart';
+import 'package:plezy/screens/catalog_item_detail_screen.dart';
+import 'package:plezy/screens/media_detail_screen.dart';
+import 'package:plezy/services/beam/beam_episode_identity.dart';
+import 'package:plezy/services/beam/beam_fallback.dart';
+import 'package:plezy/services/beam/show_episode_catalog.dart';
+import 'package:plezy/widgets/tv_browse_rail.dart';
+import '../test_helpers/profile_navigation.dart';
+import 'package:plezy/services/catalog/catalog_source.dart';
+import 'package:plezy/services/catalog/catalog_library_matcher.dart';
+import 'package:plezy/services/multi_server_manager.dart';
+import 'package:plezy/services/settings_service.dart';
+import 'package:plezy/theme/mono_theme.dart';
+import 'package:plezy/utils/platform_detector.dart';
+import 'package:plezy/utils/catalog_navigation_helper.dart';
+import 'package:plezy/utils/media_navigation_helper.dart';
+import 'package:plezy/utils/external_ids.dart';
+import 'package:plezy/widgets/overlay_sheet.dart';
+import 'package:plezy/widgets/media_card.dart';
+import 'package:plezy/widgets/optimized_media_image.dart';
+import 'package:provider/provider.dart';
+
+import '../test_helpers/media_items.dart';
+import '../test_helpers/multi_server_fixtures.dart';
+import '../test_helpers/prefs.dart';
+
+class _FakeCatalogSource implements CatalogSource {
+  final WatchlistChangeNotifier _watchlistChanges = WatchlistChangeNotifier();
+  _FakeCatalogSource({
+    bool watchlistLoading = false,
+    this.detail,
+    this.detailError,
+    this.detailCompleter,
+    this.supportsWatchlist = true,
+  }) : _watchlistValue = watchlistLoading ? null : false,
+       _watchlistLoad = watchlistLoading ? Completer<void>() : null;
+
+  bool? _watchlistValue;
+  final Completer<void>? _watchlistLoad;
+  int addToWatchlistCalls = 0;
+
+  final CatalogDetail? detail;
+  final Object? detailError;
+  final Completer<CatalogDetail>? detailCompleter;
+  int fetchDetailCalls = 0;
+  @override
+  CatalogSourceId get id => CatalogSourceId.trakt;
+
+  @override
+  String get displayName => 'Trakt';
+
+  @override
+  final bool supportsWatchlist;
+
+  @override
+  Listenable get watchlistChanges => _watchlistChanges;
+
+  @override
+  Future<CatalogDetail> fetchDetail(CatalogItem item, {int castLimit = 20, int relatedLimit = 20}) async {
+    fetchDetailCalls++;
+    final completer = detailCompleter;
+    if (completer != null) return completer.future;
+    final error = detailError;
+    if (error != null) throw error;
+    return detail ??
+        CatalogDetail(
+          item: item,
+          cast: const [
+            CatalogCastMember(name: 'First Actor', secondary: 'Lead'),
+            CatalogCastMember(name: 'Second Actor', secondary: 'Support'),
+          ],
+          related: const [
+            CatalogItem(
+              source: CatalogSourceId.trakt,
+              kind: MediaKind.movie,
+              title: 'Related Movie',
+              ids: CatalogItemIds(tmdb: 2),
+            ),
+          ],
+        );
+  }
+
+  @override
+  Future<void> ensureWatchlistLoaded() async {
+    final load = _watchlistLoad;
+    if (load != null) await load.future;
+  }
+
+  void completeWatchlistLoad() {
+    _watchlistValue = false;
+    _watchlistChanges.notify();
+    _watchlistLoad!.complete();
+  }
+
+  @override
+  Future<void> addToWatchlist(MediaKind kind, CatalogItemIds ids) async {
+    addToWatchlistCalls++;
+    _watchlistValue = true;
+    _watchlistChanges.notify();
+  }
+
+  @override
+  bool? isOnWatchlist(MediaKind kind, CatalogItemIds ids) => _watchlistValue;
+
+  @override
+  void dispose() => _watchlistChanges.dispose();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeCatalogSourcesProvider extends CatalogSourcesProvider {
+  final CatalogSource source;
+
+  _FakeCatalogSourcesProvider(this.source);
+
+  @override
+  List<CatalogSource> get connectedSources => [source];
+}
+
+class _FakeCatalogLibraryMatcher extends CatalogLibraryMatcher {
+  _FakeCatalogLibraryMatcher(super.multiServer, this.matches, {this.gate});
+
+  final List<MediaItem> matches;
+  final Completer<List<MediaItem>>? gate;
+  final calls = <CatalogItem>[];
+  @override
+  Future<List<MediaItem>> match(CatalogItem item) async {
+    calls.add(item);
+    return gate == null ? matches : await gate!.future;
+  }
+}
+
+class _Episodes extends ShowEpisodeCatalog {
+  @override
+  Future<ShowEpisodeCatalogResult?> load({required String title, int? year, String? imdbId, int? tvdbId}) async =>
+      const ShowEpisodeCatalogResult(
+        tvmazeId: 900,
+        name: 'Pioneer One',
+        premiered: '2010-06-16',
+        sourceUrl: 'https://fixture.invalid/show',
+        numberingChecked: true,
+        seasons: [ShowCatalogSeason(number: 1)],
+        episodes: [
+          ShowCatalogEpisode(
+            id: 901,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            name: 'Earthfall',
+            airdate: '2010-06-16',
+            sourceUrl: 'https://fixture.invalid/1',
+          ),
+          ShowCatalogEpisode(
+            id: 902,
+            seasonNumber: 1,
+            episodeNumber: 2,
+            name: 'The Man from Mars',
+            airdate: '2010-12-15',
+            sourceUrl: 'https://fixture.invalid/2',
+          ),
+        ],
+      );
+}
+
+const _item = CatalogItem(
+  source: CatalogSourceId.trakt,
+  kind: MediaKind.movie,
+  title: 'Catalog Movie',
+  overview: 'Overview',
+  ids: CatalogItemIds(tmdb: 1),
+);
+
+Future<void> _pumpDetail(
+  WidgetTester tester,
+  _FakeCatalogSource source, {
+  List<MediaItem> matches = const [],
+  bool pushedRoute = false,
+  CatalogItem item = _item,
+  ShowEpisodeCatalog? episodes,
+}) async {
+  final sources = _FakeCatalogSourcesProvider(source);
+  final serverManager = MultiServerManager();
+  final multiServer = testMultiServerProvider(serverManager);
+  final matcher = _FakeCatalogLibraryMatcher(multiServer, matches);
+  addTearDown(sources.dispose);
+  addTearDown(source.dispose);
+  addTearDown(serverManager.dispose);
+  addTearDown(multiServer.dispose);
+
+  await tester.pumpWidget(
+    TranslationProvider(
+      child: MultiProvider(
+        providers: [
+          Provider<CatalogLibraryMatcher>.value(value: matcher),
+          ChangeNotifierProvider<CatalogSourcesProvider>.value(value: sources),
+        ],
+        child: MaterialApp(
+          theme: monoTheme(dark: true),
+          builder: (_, child) => withProfileNavigationScope(child: child!),
+          home: pushedRoute
+              ? Builder(
+                  builder: (context) => Scaffold(
+                    body: TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => CatalogItemDetailScreen(item: item, showEpisodeCatalog: episodes),
+                        ),
+                      ),
+                      child: const Text('Open catalog'),
+                    ),
+                  ),
+                )
+              : CatalogItemDetailScreen(item: item, showEpisodeCatalog: episodes),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+  await tester.pumpAndSettle();
+  if (pushedRoute) {
+    await tester.tap(find.text('Open catalog'));
+    await tester.pumpAndSettle();
+  }
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    LocaleSettings.setLocaleSync(AppLocale.en);
+    // The facts section formats dates; `main.dart` does this at startup.
+    await initializeDateFormatting('en');
+  });
+
+  setUp(() async {
+    NetworkArtworkProvider.clientOverride = MockClient((_) async => http.Response('', 404));
+    resetSharedPreferencesForTest();
+    SettingsService.resetForTesting();
+    await SettingsService.getInstance();
+    TvDetectionService.debugSetAppleTVOverride(true);
+  });
+
+  tearDown(() {
+    TvDetectionService.debugSetAppleTVOverride(null);
+    BeamFallback.libraryLookupOverride = null;
+    BeamFallback.playerWrapper = null;
+    NetworkArtworkProvider.clientOverride?.close();
+    NetworkArtworkProvider.clientOverride = null;
+  });
+
+  for (final scenario in ['unmatched', 'matched', 'enriched', 'conflicting detail', 'Back while matching']) {
+    testWidgets('Explore show card opens episode page directly: $scenario', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const show = CatalogItem(
+        source: CatalogSourceId.trakt,
+        kind: MediaKind.show,
+        title: 'Pioneer One',
+        year: 2010,
+        ids: CatalogItemIds(imdb: 'tt1748166', trakt: 123),
+        season: ExternalSeasonRef(tvdb: 1, tmdb: 1),
+      );
+      final owned = show.toMediaItem().copyWith(id: 'real-show', serverId: 'real-server');
+      final servers = testMultiServer();
+      final gate = Completer<List<MediaItem>>();
+      final matcher = _FakeCatalogLibraryMatcher(servers.provider, [], gate: gate);
+      const enriched = CatalogItem(
+        source: CatalogSourceId.trakt,
+        kind: MediaKind.show,
+        title: 'Pioneer One',
+        year: 2010,
+        overview: 'Enriched provider detail',
+        ids: CatalogItemIds(imdb: 'tt1748166', trakt: 123),
+      );
+      const conflicting = CatalogItem(
+        source: CatalogSourceId.trakt,
+        kind: MediaKind.show,
+        title: 'Wrong Show',
+        year: 1989,
+        ids: CatalogItemIds(imdb: 'tt9999999', trakt: 123),
+      );
+      final source = _FakeCatalogSource(
+        detail: scenario == 'enriched'
+            ? const CatalogDetail(item: enriched)
+            : scenario == 'conflicting detail'
+            ? const CatalogDetail(item: conflicting)
+            : null,
+      );
+      final sources = _FakeCatalogSourcesProvider(source);
+      addTearDown(sources.dispose);
+      addTearDown(source.dispose);
+      final navigator = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        TranslationProvider(
+          child: MultiProvider(
+            providers: [
+              Provider<CatalogLibraryMatcher>.value(value: matcher),
+              ChangeNotifierProvider<CatalogSourcesProvider>.value(value: sources),
+            ],
+            child: MaterialApp(
+              navigatorKey: navigator,
+              theme: monoTheme(dark: true),
+              builder: (_, child) => withProfileNavigationScope(child: child!),
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () {
+                      if (scenario == 'Back while matching') {
+                        // Actual Explore card sink, rather than the old detail Stream action.
+                        unawaited(navigateToMediaItem(context, show.toMediaItem()));
+                      } else {
+                        final opening = scenario == 'enriched'
+                            ? show.enrichedWith(
+                                const CatalogItem(
+                                  source: CatalogSourceId.trakt,
+                                  kind: MediaKind.show,
+                                  title: 'Pioneer One',
+                                  year: 2011,
+                                  ids: CatalogItemIds(imdb: 'tt1748166', trakt: 123),
+                                ),
+                              )
+                            : show;
+                        unawaited(navigateToCatalogItem(context, opening, showEpisodeCatalog: _Episodes()));
+                      }
+                    },
+                    child: const Text('Explore show card'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final tap = tester.widget<TextButton>(find.widgetWithText(TextButton, 'Explore show card')).onPressed!;
+      tap();
+      tap(); // Two presses before rendering must create only one route.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(navigator.currentState!.canPop(), isTrue);
+      expect(find.byType(CatalogItemDetailScreen), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(matcher.calls, hasLength(1));
+      expect(matcher.calls.single.ids.imdb, 'tt1748166');
+      expect(matcher.calls.single.ids.trakt, 123);
+      expect(matcher.calls.single.year, 2010);
+      expect(matcher.calls.single.title, 'Pioneer One');
+      if (scenario == 'Back while matching') {
+        navigator.currentState!.pop();
+        await tester.pumpAndSettle();
+        gate.complete([owned]);
+        await tester.pumpAndSettle();
+        expect(navigator.currentState!.canPop(), isFalse);
+        expect(find.text('Explore show card'), findsOneWidget);
+        expect(find.byType(MediaDetailScreen), findsNothing);
+      } else {
+        gate.complete(scenario == 'matched' ? [owned] : []);
+        await tester.pumpAndSettle();
+        expect(find.byType(CatalogItemDetailScreen), findsNothing);
+        final detail = tester.widget<MediaDetailScreen>(find.byType(MediaDetailScreen));
+        expect(detail.metadata.serverId, scenario == 'matched' ? 'real-server' : null);
+        if (scenario == 'matched') expect(detail.metadata, same(owned));
+        expect(detail.metadata.title, 'Pioneer One');
+        expect(detail.metadata.year, 2010);
+        if (scenario == 'enriched') expect(detail.metadata.summary, 'Enriched provider detail');
+        expect(detail.initialSeasonIndex, 1);
+        expect(detail.discoverItem?.ratingKey, isNull);
+        expect(find.byType(TvBrowseRail), findsOneWidget);
+        navigator.currentState!.pop();
+        await tester.pumpAndSettle();
+        expect(navigator.currentState!.canPop(), isFalse, reason: 'No duplicate show route');
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
+  testWidgets('Stream remains available without optional actions and passes enriched movie to library-first Play', (
+    tester,
+  ) async {
+    const enriched = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'The Butler',
+      year: 2013,
+      ids: CatalogItemIds(imdb: 'tt1327773'),
+    );
+    MediaItem? requested;
+    BeamFallback.libraryLookupOverride = (title, year, metadata, episode) async {
+      requested = metadata;
+      expect((title, year, episode), ('The Butler', 2013, null));
+      return metadata!.copyWith(id: 'owned-movie', serverId: 'server-one');
+    };
+    BeamFallback.playerWrapper = (_) => const Scaffold(body: Text('Actual library route'));
+    await _pumpDetail(
+      tester,
+      _FakeCatalogSource(supportsWatchlist: false, detail: const CatalogDetail(item: enriched)),
+    );
+    final actions = tester.widget<FocusableActionBar>(find.byType(FocusableActionBar));
+    expect(actions.actions.map((action) => action.tooltip), ['Stream']);
+    actions.actions.single.onPressed!();
+    await tester.pumpAndSettle();
+    expect(requested?.title, 'The Butler');
+    expect(requested?.year, 2013);
+    expect(requested?.serverId, isNull);
+    expect(find.text('Actual library route'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Explore show Stream opens verified episode browser and selected episode enters library-first Play', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const show = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.show,
+      title: 'Pioneer One',
+      year: 2010,
+      ids: CatalogItemIds(imdb: 'tt1748166'),
+    );
+    BeamEpisodeIdentity? played;
+    BeamFallback.libraryLookupOverride = (_, _, metadata, episode) async {
+      played = episode;
+      return metadata!.copyWith(id: 'owned-episode', serverId: 'server-one');
+    };
+    BeamFallback.playerWrapper = (_) => const Scaffold(body: Text('Actual library episode'));
+    await _pumpDetail(
+      tester,
+      _FakeCatalogSource(detail: const CatalogDetail(item: show)),
+      item: show,
+      episodes: _Episodes(),
+    );
+    tester.widget<FocusableActionBar>(find.byType(FocusableActionBar)).actions.first.onPressed!();
+    await tester.pumpAndSettle();
+    expect(find.text('Choose episode'), findsNothing);
+    final detail = tester.widget<MediaDetailScreen>(find.byType(MediaDetailScreen));
+    expect(detail.metadata.serverId, isNull);
+    expect(
+      detail.discoverItem?.ratingKey,
+      isNull,
+      reason: 'A Trakt or IMDb ID must never be fabricated into a Plex ID',
+    );
+    final rail = tester.widget<TvBrowseRail>(find.byType(TvBrowseRail));
+    final hub = rail.hubs.firstWhere((hub) => hub.items.any((item) => item.index == 2));
+    final second = hub.items.singleWhere((item) => item.index == 2);
+    await rail.onActivateItem!(hub, second);
+    await tester.pumpAndSettle();
+    expect((played?.showTitle, played?.year, played?.season, played?.episode), ('Pioneer One', 2010, 1, 2));
+    expect(played?.metadata?.title, 'The Man from Mars');
+    expect(played?.episodeQueue.map((item) => item.index), [1, 2]);
+    expect(find.text('Actual library episode'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('fetchDetail replaces the opening item with its enriched item once loaded', (tester) async {
+    final detailCompleter = Completer<CatalogDetail>();
+    final source = _FakeCatalogSource(detailCompleter: detailCompleter);
+
+    await _pumpDetail(tester, source);
+    expect(find.text('Catalog Movie'), findsOneWidget);
+    expect(find.text('Enriched overview'), findsNothing);
+
+    detailCompleter.complete(
+      const CatalogDetail(
+        item: CatalogItem(
+          source: CatalogSourceId.trakt,
+          kind: MediaKind.movie,
+          title: 'Enriched Catalog Movie',
+          overview: 'Enriched overview',
+          ids: CatalogItemIds(tmdb: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(source.fetchDetailCalls, 1);
+    expect(find.text('Enriched Catalog Movie'), findsOneWidget);
+    expect(find.text('Enriched overview'), findsOneWidget);
+    expect(find.text('Catalog Movie'), findsNothing);
+  });
+
+  testWidgets('fetchDetail failure leaves the opening item rendered', (tester) async {
+    final source = _FakeCatalogSource(detailError: StateError('detail unavailable'));
+
+    await _pumpDetail(tester, source);
+
+    expect(source.fetchDetailCalls, 1);
+    expect(find.text('Catalog Movie'), findsOneWidget);
+    expect(find.text('Overview'), findsOneWidget);
+    expect(find.text(t.explore.cast), findsNothing);
+    expect(find.text(t.discover.moreLikeThis), findsNothing);
+  });
+
+  testWidgets('spoiler tags stay hidden until the focusable reveal action is pressed', (tester) async {
+    const item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Tagged Movie',
+      ids: CatalogItemIds(tmdb: 10),
+      tags: [
+        CatalogTag(name: 'Found family', rank: 80),
+        CatalogTag(name: 'Secret identity', rank: 95, isSpoiler: true),
+      ],
+    );
+    final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+
+    expect(find.text('Found family'), findsOneWidget);
+    expect(find.text('Secret identity'), findsNothing);
+    expect(find.text(t.explore.detail.revealSpoilerTags), findsOneWidget);
+
+    await tester.tap(find.text(t.explore.detail.revealSpoilerTags));
+    await tester.pump();
+
+    expect(find.text('Secret identity'), findsOneWidget);
+    expect(find.text(t.explore.detail.revealSpoilerTags), findsNothing);
+  });
+
+  testWidgets('ratings row labels every supported score source and its vote count', (tester) async {
+    const item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Rated Movie',
+      ids: CatalogItemIds(tmdb: 11),
+      ratings: [
+        CatalogRatingSource(source: 'simkl', value: 8.1, votes: 11),
+        CatalogRatingSource(source: 'imdb', value: 7.9, votes: 12),
+        CatalogRatingSource(source: 'mal', value: 8.3, votes: 13),
+        CatalogRatingSource(source: 'critic', value: 7.2, votes: 14),
+        CatalogRatingSource(source: 'audience', value: 8.8, votes: 15),
+      ],
+    );
+    final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+
+    expect(find.text(t.explore.detail.ratings), findsOneWidget);
+    expect(find.text('Simkl 8.1 (11 votes)'), findsOneWidget);
+    expect(find.text('IMDb 7.9 (12 votes)'), findsOneWidget);
+    expect(find.text('MyAnimeList 8.3 (13 votes)'), findsOneWidget);
+    expect(find.text('Critics 7.2 (14 votes)'), findsOneWidget);
+    expect(find.text('Audience 8.8 (15 votes)'), findsOneWidget);
+  });
+
+  testWidgets('seasonal rank keeps its season window instead of claiming all-time rank', (tester) async {
+    const item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.show,
+      title: 'Seasonal Show',
+      ids: CatalogItemIds(tmdb: 12),
+      ranks: [
+        CatalogRank(
+          rank: 7,
+          scope: CatalogRankScope.popular,
+          allTime: false,
+          year: 2025,
+          season: CatalogSeasonName.fall,
+        ),
+      ],
+    );
+    final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+
+    expect(find.text('#7 in Fall 2025'), findsOneWidget);
+    expect(find.text('#7 popular'), findsNothing);
+  });
+
+  testWidgets('windowed viewers render only when their period is present', (tester) async {
+    const missingPeriod = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Missing Period',
+      ids: CatalogItemIds(tmdb: 13),
+      audience: CatalogAudience(listed: 3, viewers: 42),
+    );
+    final firstSource = _FakeCatalogSource(detail: const CatalogDetail(item: missingPeriod));
+    await _pumpDetail(tester, firstSource, item: missingPeriod);
+
+    expect(find.text('3 listed'), findsOneWidget);
+    expect(find.textContaining('42'), findsNothing);
+
+    const weekly = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Weekly Viewers',
+      ids: CatalogItemIds(tmdb: 14),
+      audience: CatalogAudience(viewers: 42, viewersPeriod: CatalogAudiencePeriod.week),
+    );
+    // Unmount first: pumping a second detail screen at the same tree position
+    // would reuse the existing State, so `initState` would never re-run and
+    // the screen would keep the previous item.
+    await tester.pumpWidget(const SizedBox.shrink());
+    final secondSource = _FakeCatalogSource(detail: const CatalogDetail(item: weekly));
+    await _pumpDetail(tester, secondSource, item: weekly);
+
+    expect(find.text('42 watched this week'), findsOneWidget);
+  });
+
+  testWidgets('trailer action appears only after an item supplies a trailer URL', (tester) async {
+    final detailCompleter = Completer<CatalogDetail>();
+    final source = _FakeCatalogSource(detailCompleter: detailCompleter);
+
+    await _pumpDetail(tester, source);
+    expect(find.byTooltip(t.explore.detail.watchTrailer), findsNothing);
+
+    detailCompleter.complete(
+      const CatalogDetail(
+        item: CatalogItem(
+          source: CatalogSourceId.trakt,
+          kind: MediaKind.movie,
+          title: 'Catalog Movie',
+          trailerUrl: 'https://example.com/trailer',
+          ids: CatalogItemIds(tmdb: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip(t.explore.detail.watchTrailer), findsOneWidget);
+  });
+
+  testWidgets('gallery and background sections render when populated', (tester) async {
+    const galleryUrls = [
+      'https://cdn.myanimelist.net/images/anime/gallery-1.jpg',
+      'https://cdn.myanimelist.net/images/anime/gallery-2.jpg',
+    ];
+    const item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Production Movie',
+      ids: CatalogItemIds(tmdb: 15),
+      gallery: galleryUrls,
+      background: 'Filmed over three winters.',
+    );
+    final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+
+    expect(find.text(t.explore.detail.background), findsOneWidget);
+    expect(find.text('Filmed over three winters.'), findsOneWidget);
+    expect(find.text(t.explore.detail.gallery), findsOneWidget);
+    final galleryFinder = find.byKey(const Key('catalog_detail_gallery'));
+    expect(galleryFinder, findsOneWidget);
+    expect(tester.widget<ListView>(galleryFinder).scrollDirection, Axis.horizontal);
+    final images = tester
+        .widgetList<OptimizedMediaImage>(find.descendant(of: galleryFinder, matching: find.byType(OptimizedMediaImage)))
+        .map((image) => image.imagePath);
+    expect(images, galleryUrls);
+  });
+
+  testWidgets('all-null metadata renders without an empty optional section header', (tester) async {
+    const item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Bare Movie',
+      ids: CatalogItemIds(tmdb: 15),
+    );
+    final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+
+    expect(find.text('Bare Movie'), findsOneWidget);
+    expect(find.text(t.explore.detail.ratings), findsNothing);
+    expect(find.text(t.explore.detail.schedule), findsNothing);
+    expect(find.text(t.explore.detail.crew), findsNothing);
+    expect(find.text(t.explore.detail.tags), findsNothing);
+    expect(find.text(t.explore.detail.links), findsNothing);
+    expect(find.text(t.explore.detail.watchOn), findsNothing);
+    expect(find.text(t.explore.cast), findsNothing);
+    expect(find.text(t.discover.moreLikeThis), findsNothing);
+    expect(find.text(t.explore.detail.gallery), findsNothing);
+    expect(find.text(t.explore.detail.background), findsNothing);
+  });
+
+  testWidgets('franchise relations keep their labelled shelf separate from recommendations', (tester) async {
+    const relationItem = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'The Sequel',
+      ids: CatalogItemIds(tmdb: 17),
+    );
+    const recommendation = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'A Similar Movie',
+      ids: CatalogItemIds(tmdb: 18),
+    );
+    final source = _FakeCatalogSource(
+      detail: const CatalogDetail(
+        item: _item,
+        related: [recommendation],
+        relations: [
+          CatalogRelation(type: CatalogRelationType.sequel, items: [relationItem]),
+        ],
+      ),
+    );
+
+    await _pumpDetail(tester, source);
+
+    expect(find.text(t.explore.relation.sequel), findsOneWidget);
+    expect(find.text(t.discover.moreLikeThis), findsOneWidget);
+    expect(find.text('The Sequel'), findsOneWidget);
+    expect(find.text('A Similar Movie'), findsOneWidget);
+  });
+
+  testWidgets('social recommendation keeps its person, reason, and note', (tester) async {
+    const item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Social Movie',
+      ids: CatalogItemIds(tmdb: 19),
+      recommenders: [
+        CatalogRecommender(
+          username: 'pat',
+          name: 'Pat',
+          note: 'A thoughtful recommendation.',
+          reason: CatalogRecommendationReason.recommended,
+        ),
+      ],
+    );
+    final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+
+    expect(find.text('Recommended by Pat'), findsOneWidget);
+    expect(find.text('A thoughtful recommendation.'), findsOneWidget);
+  });
+
+  testWidgets('extended facts render in their labelled sections with localized values', (tester) async {
+    final item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.show,
+      title: 'Fact-rich Show',
+      ids: CatalogItemIds(tmdb: 20),
+      broadcastSeason: CatalogSeasonInfo(name: CatalogSeasonName.fall, year: 2025),
+      format: CatalogFormat.ova,
+      sourceMaterial: CatalogSourceMaterial.lightNovel,
+      studios: ['Studio One'],
+      countries: ['US'],
+      languages: ['ja'],
+      credits: [
+        CatalogCredit(name: 'A. Director', role: CatalogCreditRole.director),
+        CatalogCredit(name: 'W. Writer', role: CatalogCreditRole.writer),
+      ],
+      broadcast: CatalogBroadcast(weekday: DateTime.tuesday, time: '21:00', timezone: 'Asia/Tokyo'),
+      nextEpisode: CatalogNextEpisode(episode: 4, airsAt: DateTime.utc(2100)),
+      serverState: CatalogServerState(
+        availability: CatalogAvailability.available,
+        request: CatalogRequestState.pending,
+        availableSeasons: 2,
+        totalSeasons: 3,
+      ),
+      audience: CatalogAudience(dropRate: 0.25),
+      releaseDate: DateTime.utc(2024, 1, 2),
+      physicalReleaseDate: DateTime.utc(2024, 4, 5),
+      endDate: DateTime.utc(2025, 6, 7),
+      addedAt: DateTime.utc(2024, 2, 3),
+      userRating: 9,
+      originalTitle: 'Original Fact Title',
+      altTitles: ['Alternate Fact Title'],
+      contentAdvisory: 'Suitable for older teens.',
+      budget: 1000000,
+      revenue: 2500000,
+      links: [
+        CatalogLink(label: 'StreamCo', url: 'https://example.com/watch', isStreaming: true),
+        CatalogLink(label: 'Official Site', url: 'https://example.com'),
+      ],
+    );
+    final source = _FakeCatalogSource(detail: CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+
+    expect(find.text('Fall 2025'), findsOneWidget);
+    expect(find.text('OVA'), findsOneWidget);
+    expect(find.text('Light novel'), findsOneWidget);
+    expect(find.text('25% dropped it'), findsOneWidget);
+    expect(find.text('Available'), findsOneWidget);
+    expect(find.text('Pending approval'), findsOneWidget);
+    expect(find.text('2/3 seasons'), findsOneWidget);
+    expect(find.text('Airs Tuesday at 21:00 Asia/Tokyo'), findsOneWidget);
+    expect(find.textContaining('Ep 4 in'), findsOneWidget);
+    expect(find.text('United States'), findsOneWidget);
+    expect(find.text('Japanese'), findsOneWidget);
+    expect(find.text(t.explore.detail.crew), findsOneWidget);
+    expect(find.text('A. Director'), findsOneWidget);
+    expect(find.text('W. Writer'), findsOneWidget);
+    expect(find.text(t.explore.detail.watchOn), findsOneWidget);
+    expect(find.text(t.explore.detail.links), findsOneWidget);
+    expect(find.text('Open on StreamCo'), findsOneWidget);
+    expect(find.text('Open on Official Site'), findsOneWidget);
+    expect(find.text('Original Fact Title'), findsOneWidget);
+    expect(find.text('Alternate Fact Title'), findsOneWidget);
+    expect(find.text('Suitable for older teens.'), findsOneWidget);
+    expect(find.textContaining('1,000,000'), findsOneWidget);
+    expect(find.textContaining('2,500,000'), findsOneWidget);
+  });
+
+  testWidgets('D-pad includes spoiler reveal and outbound links after the main action bar', (tester) async {
+    const item = CatalogItem(
+      source: CatalogSourceId.trakt,
+      kind: MediaKind.movie,
+      title: 'Interactive Movie',
+      ids: CatalogItemIds(tmdb: 21),
+      trailerUrl: 'https://example.com/trailer',
+      tags: [CatalogTag(name: 'Spoiler', isSpoiler: true)],
+      links: [
+        CatalogLink(label: 'StreamCo', url: 'https://example.com/watch', isStreaming: true),
+        CatalogLink(label: 'Official Site', url: 'https://example.com'),
+      ],
+    );
+    final source = _FakeCatalogSource(detail: const CatalogDetail(item: item));
+
+    await _pumpDetail(tester, source, item: item);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'ActionBar[0]');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_spoiler_tags');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_external_link_0');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_external_link_1');
+  });
+
+  testWidgets('D-pad traverses from actions through cast and back from recommendations', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1280, 720);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await _pumpDetail(tester, _FakeCatalogSource());
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'ActionBar[0]');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_cast_row');
+    expect(
+      tester.widget<SingleChildScrollView>(find.byKey(const Key('catalog_detail_scroll'))).controller!.offset,
+      greaterThan(0),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, startsWith('hub_catalog-related:'));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_cast_row');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'ActionBar[0]');
+    expect(tester.widget<SingleChildScrollView>(find.byKey(const Key('catalog_detail_scroll'))).controller!.offset, 0);
+  });
+
+  testWidgets('D-pad includes every library match between actions and cast', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1280, 720);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final matches = [
+      testMediaItem(id: 'match_1', libraryTitle: 'Movies', serverName: 'Living Room'),
+      testMediaItem(id: 'match_2', libraryTitle: 'Favorites', serverName: 'Bedroom'),
+    ];
+    await _pumpDetail(tester, _FakeCatalogSource(), matches: matches);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_library_match_0');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_library_match_1');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_cast_row');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'catalog_library_match_1');
+  });
+
+  testWidgets('pending watchlist action stays focusable after Stream and its press retries the snapshot', (
+    tester,
+  ) async {
+    final source = _FakeCatalogSource(watchlistLoading: true);
+    await _pumpDetail(tester, source);
+
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'ActionBar[0]');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'ActionBar[1]');
+    final actionNode = tester
+        .widgetList<Focus>(find.descendant(of: find.byType(FocusableActionBar), matching: find.byType(Focus)))
+        .map((widget) => widget.focusNode)
+        .whereType<FocusNode>()
+        .singleWhere((node) => node.debugLabel == 'ActionBar[1]');
+    expect(actionNode.canRequestFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(source.addToWatchlistCalls, 0);
+
+    source.completeWatchlistLoad();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(source.addToWatchlistCalls, 1);
+  });
+  testWidgets('TV Back closes a hosted sheet without popping the catalog route', (tester) async {
+    await _pumpDetail(tester, _FakeCatalogSource(), pushedRoute: true);
+
+    final sheetResult = OverlaySheetController.showAdaptive<void>(
+      tester.element(find.byType(FocusableActionBar)),
+      builder: (_) => const SizedBox(height: 120, child: Center(child: Text('Hosted request sheet'))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Hosted request sheet'), findsOneWidget);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.gameButtonB);
+    // Android TV can dispatch route Back for the same remote press. Deliver
+    // that duplicate in the same key sequence, before the coordinator's
+    // one-frame ownership marker is cleared.
+    await tester.binding.handlePopRoute();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.gameButtonB);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hosted request sheet'), findsNothing);
+    expect(find.byType(CatalogItemDetailScreen), findsOneWidget);
+    await expectLater(sheetResult, completion(isNull));
+
+    // A later, independent system Back still pops the catalog route.
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(CatalogItemDetailScreen), findsNothing);
+  });
+
+  testWidgets('recommendation posters use compact grid-equivalent TV sizing', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1920, 1080);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await _pumpDetail(tester, _FakeCatalogSource());
+
+    expect(tester.getSize(find.byType(MediaCard).first).width, lessThan(210));
+  });
+}

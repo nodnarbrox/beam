@@ -1,0 +1,157 @@
+name: plezy
+description: "Beam media center with a Halloween video store"
+publish_to: "none"
+version: 2.10.0+4244
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  intl: ^0.20.2
+  json_annotation: ^4.12.0
+  shared_preferences: ^2.5.4
+  cached_network_image_ce: ^4.9.0
+  html: ^0.15.6
+  http: ^1.2.0
+  youtube_explode_dart:
+    path: packages/youtube_explode_dart
+  # App-owned free community OpenVPN (VPN Gate) so torrent indexers/trackers
+  # connect on a censoring VPN. Wraps ics-openvpn (ships armeabi-v7a). Pinned.
+  openvpn_flutter: 1.3.4
+  url_launcher: ^6.3.0
+  uuid: ^4.4.0
+  window_manager: ^0.5.1
+  logger: ^2.7.0
+  package_info_plus: ^9.0.0
+  device_info_plus: ^12.3.0
+  provider: ^6.1.2
+  flex_color_picker: ^3.8.0
+  qr_flutter: ^4.1.0
+  slang: ^4.14.0
+  slang_flutter: ^4.14.0
+  duration: ^4.0.3
+  connectivity_plus:
+    path: packages/vendor/plus_plugins/packages/connectivity_plus/connectivity_plus
+  os_media_controls:
+    path: packages/vendor/media_controls
+  rate_limiter: ^1.0.0
+  wakelock_plus:
+    path: packages/wakelock_plus
+  path_provider: ^2.1.0
+  path: ^1.9.0
+  universal_gamepad: ^1.5.7
+  drift: ^2.31.0
+  crypto: ^3.0.7
+  cryptography: ^2.9.0
+  file_picker: ^11.0.2
+  saf_util:
+    # Vendored upstream 3.1.0 with a pending Result lifecycle fix (CHANGELOG) —
+    # upstream still double-replies MethodChannel results and crashes the Activity.
+    path: packages/saf_util
+  saf_stream: ^3.1.0
+  material_symbols_icons: ^4.2951.0
+  web_socket_channel: ^3.0.1
+  dart_discord_presence: ^1.2.0
+  flutter_svg: ^2.2.3
+  # Fork note: 41c16be creates the desktop temp parent before opening the
+  # partial file, independently fixing upstream #649's missing-directory case.
+  # Upstream's later target-directory fallback is unnecessary while this fork
+  # retains its same-filesystem move and resume-data cleanup implementation.
+  # No per-host trust bypass is carried: Plezy has no app-wide certificate
+  # exception policy, and weakening only background downloads would make API
+  # and playback behavior inconsistent. Revisit only with an explicit,
+  # host-scoped trust setting shared by every media-server HTTP client.
+  background_downloader:
+    path: packages/vendor/background_downloader
+  sentry_flutter: ^9.25.0
+  auto_updater:
+    path: packages/vendor/auto_updater/packages/auto_updater
+  cupertino_http: ^3.0.2
+  cronet_http: ^1.6.0
+  win_http: ^0.2.2
+  collection: ^1.18.0
+  freezed_annotation: ^3.1.0
+  xml: ^7.0.1
+  string_similarity: ^2.2.0
+  unorm_dart: ^0.3.2
+  # 3D video-store (Blockbuster) mode. Pinned to 0.16.0: it is the newest
+  # release whose flutter_gpu usage matches the flutter_gpu API bundled in
+  # THIS engine (Flutter 3.44.8, engine cut 2026-07-23). 0.17.0+ call
+  # GpuContext.supportsTextureCompression / TextureCompressionFamily and a
+  # RenderPass vertexLayout param that only exist in a newer engine, so they
+  # pass `flutter analyze` but fail the AOT/kernel compile against this engine
+  # (verified: `flutter build apk` errored in compressed_texture.dart +
+  # shadow_encoder.dart at 0.18.1). Requires Flutter GPU (Impeller) — the store
+  # degrades to a 2D shelf fallback on devices without it (see video_store/).
+  flutter_scene: 0.16.0
+  # flutter_scene's public API takes vector_math (32-bit) Vector3/Vector4/Matrix4.
+  # The video-store screens import it directly, so declare it explicitly.
+  vector_math: 2.2.0
+
+  # --- MediaBeam (beam/) module ---
+  # SOCKS5 proxy factory for HttpClient (RD/indexer/rclone traffic hiding).
+  # Dart HttpClient does HTTP proxy natively but not SOCKS5.
+  socks5_proxy: ^2.1.1
+  # Torrent-stream (play-while-downloading) engine, VENDORED + FORKED to add
+  # SOCKS5 proxy support to BtConfig (see packages/libtorrent_flutter/PROXY_PATCH.md).
+  # Native armv7 .so must be rebuilt from the patched src/ before shipping.
+  libtorrent_flutter:
+    path: packages/libtorrent_flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  # Root analysis traverses packages/saf_util and consumes its lint profile.
+  mgenware_dart_lints: ^8.0.0
+  fake_async: ^1.3.3
+  stream_channel: ^2.1.4
+  build_runner: ^2.13.0
+  json_serializable: ^6.7.1
+  slang_build_runner: ^4.14.0
+  sentry_dart_plugin: ^3.3.0
+  # Used by the explicit check-unused-* CI steps; its analyzer plugin is disabled.
+  dart_code_linter: ^4.1.8
+  drift_dev: ^2.28.3
+  shared_preferences_platform_interface: ^2.4.0
+  path_provider_platform_interface: ^2.1.0
+  plugin_platform_interface: ^2.1.0
+  freezed: ^3.2.5
+  analyzer: 10.2.0
+
+dependency_overrides:
+  auto_updater_platform_interface:
+    path: packages/vendor/auto_updater/packages/auto_updater_platform_interface
+  auto_updater_macos:
+    path: packages/vendor/auto_updater/packages/auto_updater_macos
+  auto_updater_windows:
+    path: packages/vendor/auto_updater/packages/auto_updater_windows
+sentry:
+  org: plezy
+  project: plezy
+  url: https://bugs.plezy.app
+  upload_sources: true
+  commits: false
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/store3d/
+    - assets/plezy.png
+    - assets/plezy_adaptive_foreground.svg
+    - assets/plex_chevron.svg
+    - assets/jellyfin_icon.svg
+    - assets/trakt_circlemark.svg
+    - assets/mal_mark.svg
+    - assets/anilist_mark.svg
+    - assets/simkl_mark.svg
+    - assets/seerr_mark.svg
+    - assets/go-noto-current-regular.ttf
+    - assets/shaders/nvscaler/
+    - assets/shaders/artcnn/
+    - assets/shaders/anime4k/
+    - assets/player_icons/
+    - assets/rating_icons/

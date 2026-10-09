@@ -1,0 +1,2494 @@
+{
+  "burbs": {
+    "showId": 79408,
+    "episodes": [
+      {
+        "id": 3461026,
+        "name": "The Goddamn Brownies",
+        "season": 1,
+        "number": 1,
+        "type": "regular"
+      },
+      {
+        "id": 3461027,
+        "name": "Mind Your Own Business",
+        "season": 1,
+        "number": 2,
+        "type": "regular"
+      },
+      {
+        "id": 3461028,
+        "name": "Sardine?",
+        "season": 1,
+        "number": 3,
+        "type": "regular"
+      },
+      {
+        "id": 3461029,
+        "name": "A Nine on the Tension Scale",
+        "season": 1,
+        "number": 4,
+        "type": "regular"
+      },
+      {
+        "id": 3461030,
+        "name": "The Old Face-to-Face",
+        "season": 1,
+        "number": 5,
+        "type": "regular"
+      },
+      {
+        "id": 3461031,
+        "name": "Neighbor Take Warning",
+        "season": 1,
+        "number": 6,
+        "type": "regular"
+      },
+      {
+        "id": 3461032,
+        "name": "Do Not Mess With Suburbanites",
+        "season": 1,
+        "number": 7,
+        "type": "regular"
+      },
+      {
+        "id": 3461033,
+        "name": "Only One Way Out",
+        "season": 1,
+        "number": 8,
+        "type": "regular"
+      }
+    ],
+    "lists": [
+      {
+        "id": 5340,
+        "broadcast_premiere": true,
+        "dvd_release": false,
+        "verbatim_order": false,
+        "language_premiere": false
+      }
+    ],
+    "alternates": {
+      "5340": [
+        {
+          "id": 54455,
+          "name": "The Goddamn Brownies",
+          "season": 1,
+          "number": 1,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461026,
+                "name": "The Goddamn Brownies",
+                "season": 1,
+                "number": 1,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 54456,
+          "name": "Mind Your Own Business",
+          "season": 1,
+          "number": 2,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461027,
+                "name": "Mind Your Own Business",
+                "season": 1,
+                "number": 2,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 54563,
+          "name": "Sardine?",
+          "season": 1,
+          "number": 3,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461028,
+                "name": "Sardine?",
+                "season": 1,
+                "number": 3,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 54770,
+          "name": "A Nine on the Tension Scale",
+          "season": 1,
+          "number": 4,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461029,
+                "name": "A Nine on the Tension Scale",
+                "season": 1,
+                "number": 4,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 54771,
+          "name": "The Old Face-to-Face",
+          "season": 1,
+          "number": 5,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461030,
+                "name": "The Old Face-to-Face",
+                "season": 1,
+                "number": 5,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 55038,
+          "name": "Neighbor Take Warning",
+          "season": 1,
+          "number": 6,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461031,
+                "name": "Neighbor Take Warning",
+                "season": 1,
+                "number": 6,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 55039,
+          "name": "Do Not Mess With Suburbanites",
+          "season": 1,
+          "number": 7,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461032,
+                "name": "Do Not Mess With Suburbanites",
+                "season": 1,
+                "number": 7,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 55040,
+          "name": "Only One Way Out",
+          "season": 1,
+          "number": 8,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3461033,
+                "name": "Only One Way Out",
+                "season": 1,
+                "number": 8,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/79408",
+                    "name": "The \u2018Burbs"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "spidey": {
+    "showId": 43708,
+    "episodes": [
+      {
+        "id": 2115523,
+        "name": "Spidey to the Power of Three",
+        "season": 1,
+        "number": 1,
+        "type": "regular"
+      },
+      {
+        "id": 2134709,
+        "name": "Panther Patience",
+        "season": 1,
+        "number": 2,
+        "type": "regular"
+      },
+      {
+        "id": 2134710,
+        "name": "Superhero Hiccups",
+        "season": 1,
+        "number": 3,
+        "type": "regular"
+      },
+      {
+        "id": 2134711,
+        "name": "Lost and Found",
+        "season": 1,
+        "number": 4,
+        "type": "regular"
+      },
+      {
+        "id": 2134712,
+        "name": "Doc Ock's Super Octopus",
+        "season": 1,
+        "number": 5,
+        "type": "regular"
+      },
+      {
+        "id": 2134713,
+        "name": "Attack of the Green Giggles",
+        "season": 1,
+        "number": 6,
+        "type": "regular"
+      },
+      {
+        "id": 2134714,
+        "name": "Bug in the System",
+        "season": 1,
+        "number": 7,
+        "type": "regular"
+      },
+      {
+        "id": 2134715,
+        "name": "Test Your Super Strength",
+        "season": 1,
+        "number": 8,
+        "type": "regular"
+      },
+      {
+        "id": 2134716,
+        "name": "Pecking Prankster Pigeons",
+        "season": 1,
+        "number": 9,
+        "type": "regular"
+      },
+      {
+        "id": 2134717,
+        "name": "Green Thumb",
+        "season": 1,
+        "number": 10,
+        "type": "regular"
+      },
+      {
+        "id": 2155252,
+        "name": "Mother's Day Mayhem",
+        "season": 1,
+        "number": 11,
+        "type": "regular"
+      },
+      {
+        "id": 2155253,
+        "name": "Not-So-Fun House",
+        "season": 1,
+        "number": 12,
+        "type": "regular"
+      },
+      {
+        "id": 2155254,
+        "name": "Camping Conundrum",
+        "season": 1,
+        "number": 13,
+        "type": "regular"
+      },
+      {
+        "id": 2155255,
+        "name": "The Great Green Crime Spree",
+        "season": 1,
+        "number": 14,
+        "type": "regular"
+      },
+      {
+        "id": 2177079,
+        "name": "Rocket Rhino!",
+        "season": 1,
+        "number": 15,
+        "type": "regular"
+      },
+      {
+        "id": 2177080,
+        "name": "Trick or TRACE-E",
+        "season": 1,
+        "number": 16,
+        "type": "regular"
+      },
+      {
+        "id": 2177081,
+        "name": "Gob-zilla",
+        "season": 1,
+        "number": 17,
+        "type": "regular"
+      },
+      {
+        "id": 2177082,
+        "name": "Speedy Spidey Delivery",
+        "season": 1,
+        "number": 18,
+        "type": "regular"
+      },
+      {
+        "id": 2204239,
+        "name": "Good Guy Gobby",
+        "season": 1,
+        "number": 19,
+        "type": "regular"
+      },
+      {
+        "id": 2204240,
+        "name": "Spider Monkey",
+        "season": 1,
+        "number": 20,
+        "type": "regular"
+      },
+      {
+        "id": 2211478,
+        "name": "CAT-astrophe",
+        "season": 1,
+        "number": 21,
+        "type": "regular"
+      },
+      {
+        "id": 2211479,
+        "name": "Swing With a Stomp",
+        "season": 1,
+        "number": 22,
+        "type": "regular"
+      },
+      {
+        "id": 2199690,
+        "name": "A Very Spidey Christmas",
+        "season": 1,
+        "number": 23,
+        "type": "regular"
+      },
+      {
+        "id": 2199691,
+        "name": "Gobby on Ice",
+        "season": 1,
+        "number": 24,
+        "type": "regular"
+      },
+      {
+        "id": 2218509,
+        "name": "Going Green",
+        "season": 1,
+        "number": 25,
+        "type": "regular"
+      },
+      {
+        "id": 2218511,
+        "name": "Coming Clean",
+        "season": 1,
+        "number": 26,
+        "type": "regular"
+      },
+      {
+        "id": 2218513,
+        "name": "Web Beard's Treasure",
+        "season": 1,
+        "number": 27,
+        "type": "regular"
+      },
+      {
+        "id": 2218514,
+        "name": "Washed Away",
+        "season": 1,
+        "number": 28,
+        "type": "regular"
+      },
+      {
+        "id": 2242935,
+        "name": "Spin Rushes In",
+        "season": 1,
+        "number": 29,
+        "type": "regular"
+      },
+      {
+        "id": 2242936,
+        "name": "Bridge Bandit",
+        "season": 1,
+        "number": 30,
+        "type": "regular"
+      },
+      {
+        "id": 2242944,
+        "name": "Art Attack!",
+        "season": 1,
+        "number": 31,
+        "type": "regular"
+      },
+      {
+        "id": 2242945,
+        "name": "Puppy Pandemonium",
+        "season": 1,
+        "number": 32,
+        "type": "regular"
+      },
+      {
+        "id": 2280293,
+        "name": "Goblin Island",
+        "season": 1,
+        "number": 33,
+        "type": "regular"
+      },
+      {
+        "id": 2280294,
+        "name": "Doc Ock and the Shocktobots",
+        "season": 1,
+        "number": 34,
+        "type": "regular"
+      },
+      {
+        "id": 2283548,
+        "name": "Peter's Pendant Predicament",
+        "season": 1,
+        "number": 35,
+        "type": "regular"
+      },
+      {
+        "id": 2283549,
+        "name": "TWIST-E",
+        "season": 1,
+        "number": 36,
+        "type": "regular"
+      },
+      {
+        "id": 2291223,
+        "name": "Itsy-Bitsy Spiders",
+        "season": 1,
+        "number": 37,
+        "type": "regular"
+      },
+      {
+        "id": 2291224,
+        "name": "Gobby's Rotten Pumpkin Hunt",
+        "season": 1,
+        "number": 38,
+        "type": "regular"
+      },
+      {
+        "id": 2291225,
+        "name": "The Wozzlesnook",
+        "season": 1,
+        "number": 39,
+        "type": "regular"
+      },
+      {
+        "id": 2291226,
+        "name": "Superhero Switcheroo",
+        "season": 1,
+        "number": 40,
+        "type": "regular"
+      },
+      {
+        "id": 2301249,
+        "name": "Aunt May's Mess",
+        "season": 1,
+        "number": 41,
+        "type": "regular"
+      },
+      {
+        "id": 2301250,
+        "name": "Foam Sweet Foam",
+        "season": 1,
+        "number": 42,
+        "type": "regular"
+      },
+      {
+        "id": 2313000,
+        "name": "Freeze! It's Team Spidey",
+        "season": 1,
+        "number": 43,
+        "type": "regular"
+      },
+      {
+        "id": 2313001,
+        "name": "A Sticky Situation",
+        "season": 1,
+        "number": 44,
+        "type": "regular"
+      },
+      {
+        "id": 2328342,
+        "name": "Rhinoctopus",
+        "season": 1,
+        "number": 45,
+        "type": "regular"
+      },
+      {
+        "id": 2328343,
+        "name": "A Pumpkin Problem",
+        "season": 1,
+        "number": 46,
+        "type": "regular"
+      },
+      {
+        "id": 2335180,
+        "name": "Catch and Release",
+        "season": 1,
+        "number": 47,
+        "type": "regular"
+      },
+      {
+        "id": 2335181,
+        "name": "Construction Destruction",
+        "season": 1,
+        "number": 48,
+        "type": "regular"
+      },
+      {
+        "id": 2356396,
+        "name": "Parade Panic",
+        "season": 1,
+        "number": 49,
+        "type": "regular"
+      },
+      {
+        "id": 2356397,
+        "name": "The Case of the Burgling Book Bandit",
+        "season": 1,
+        "number": 50,
+        "type": "regular"
+      },
+      {
+        "id": 2362069,
+        "name": "Electro's Gotta Glow",
+        "season": 2,
+        "number": 1,
+        "type": "regular"
+      },
+      {
+        "id": 2365548,
+        "name": "Black Cat Chaos",
+        "season": 2,
+        "number": 2,
+        "type": "regular"
+      },
+      {
+        "id": 2365549,
+        "name": "Lights Out",
+        "season": 2,
+        "number": 3,
+        "type": "regular"
+      },
+      {
+        "id": 2365550,
+        "name": "Sandman Won't Share",
+        "season": 2,
+        "number": 4,
+        "type": "regular"
+      },
+      {
+        "id": 2383805,
+        "name": "Bootsie's Day Out",
+        "season": 2,
+        "number": 5,
+        "type": "regular"
+      },
+      {
+        "id": 2383806,
+        "name": "Trouble at Tony's",
+        "season": 2,
+        "number": 6,
+        "type": "regular"
+      },
+      {
+        "id": 2383810,
+        "name": "Sonic Boom Boom",
+        "season": 2,
+        "number": 7,
+        "type": "regular"
+      },
+      {
+        "id": 2383811,
+        "name": "Mini Golf Goof",
+        "season": 2,
+        "number": 8,
+        "type": "regular"
+      },
+      {
+        "id": 2383843,
+        "name": "Li'l Hulk",
+        "season": 2,
+        "number": 9,
+        "type": "regular"
+      },
+      {
+        "id": 2383844,
+        "name": "Surprise Party Surprise",
+        "season": 2,
+        "number": 10,
+        "type": "regular"
+      },
+      {
+        "id": 2405147,
+        "name": "Can't Stop Dancing",
+        "season": 2,
+        "number": 11,
+        "type": "regular"
+      },
+      {
+        "id": 2405148,
+        "name": "The Ant Thief",
+        "season": 2,
+        "number": 12,
+        "type": "regular"
+      },
+      {
+        "id": 2405149,
+        "name": "Sand Trapped",
+        "season": 2,
+        "number": 13,
+        "type": "regular"
+      },
+      {
+        "id": 2405155,
+        "name": "Too Much Fun",
+        "season": 2,
+        "number": 14,
+        "type": "regular"
+      },
+      {
+        "id": 2418071,
+        "name": "Halted Holiday",
+        "season": 2,
+        "number": 15,
+        "type": "regular"
+      },
+      {
+        "id": 2418072,
+        "name": "Merry Spidey Christmas",
+        "season": 2,
+        "number": 16,
+        "type": "regular"
+      },
+      {
+        "id": 2434908,
+        "name": "An Egg-cellent Adventure",
+        "season": 2,
+        "number": 17,
+        "type": "regular"
+      },
+      {
+        "id": 2434909,
+        "name": "The Hangout Headache",
+        "season": 2,
+        "number": 18,
+        "type": "regular"
+      },
+      {
+        "id": 2434915,
+        "name": "Follow that Sea Monster!",
+        "season": 2,
+        "number": 19,
+        "type": "regular"
+      },
+      {
+        "id": 2434916,
+        "name": "It's Bad to be Gooed",
+        "season": 2,
+        "number": 20,
+        "type": "regular"
+      },
+      {
+        "id": 2451975,
+        "name": "Liberty on the Loose",
+        "season": 2,
+        "number": 21,
+        "type": "regular"
+      },
+      {
+        "id": 2451976,
+        "name": "Green Goblin's Dino Disaster",
+        "season": 2,
+        "number": 22,
+        "type": "regular"
+      },
+      {
+        "id": 2451977,
+        "name": "Spidey Tidies Up",
+        "season": 2,
+        "number": 23,
+        "type": "regular"
+      },
+      {
+        "id": 2451978,
+        "name": "Oh No, Tomatoes!",
+        "season": 2,
+        "number": 24,
+        "type": "regular"
+      },
+      {
+        "id": 2476085,
+        "name": "Clean Power",
+        "season": 2,
+        "number": 25,
+        "type": "regular"
+      },
+      {
+        "id": 2476086,
+        "name": "Doc Ock & The Rocktobots",
+        "season": 2,
+        "number": 26,
+        "type": "regular"
+      },
+      {
+        "id": 2476087,
+        "name": "Pirate Plunder Blunder",
+        "season": 2,
+        "number": 27,
+        "type": "regular"
+      },
+      {
+        "id": 2476088,
+        "name": "Bad Bot",
+        "season": 2,
+        "number": 28,
+        "type": "regular"
+      },
+      {
+        "id": 2492984,
+        "name": "Spin Saves the Day",
+        "season": 2,
+        "number": 29,
+        "type": "regular"
+      },
+      {
+        "id": 2492985,
+        "name": "Water Woes",
+        "season": 2,
+        "number": 30,
+        "type": "regular"
+      },
+      {
+        "id": 2492986,
+        "name": "Tunnel Trouble",
+        "season": 2,
+        "number": 31,
+        "type": "regular"
+      },
+      {
+        "id": 2492987,
+        "name": "Mystery on Goblin Island",
+        "season": 2,
+        "number": 32,
+        "type": "regular"
+      },
+      {
+        "id": 2509341,
+        "name": "The Maltese Kitten",
+        "season": 2,
+        "number": 33,
+        "type": "regular"
+      },
+      {
+        "id": 2509343,
+        "name": "A Day With Black Panther",
+        "season": 2,
+        "number": 34,
+        "type": "regular"
+      },
+      {
+        "id": 2509349,
+        "name": "The New Villain in Town",
+        "season": 2,
+        "number": 35,
+        "type": "regular"
+      },
+      {
+        "id": 2509350,
+        "name": "Spidey Cat",
+        "season": 2,
+        "number": 36,
+        "type": "regular"
+      },
+      {
+        "id": 2530630,
+        "name": "A Syrupy Solution",
+        "season": 2,
+        "number": 37,
+        "type": "regular"
+      },
+      {
+        "id": 2530631,
+        "name": "Little Ant, Big Problem",
+        "season": 2,
+        "number": 38,
+        "type": "regular"
+      },
+      {
+        "id": 2530632,
+        "name": "Ock Tower",
+        "season": 2,
+        "number": 39,
+        "type": "regular"
+      },
+      {
+        "id": 2530633,
+        "name": "Outsmarted by Art",
+        "season": 2,
+        "number": 40,
+        "type": "regular"
+      },
+      {
+        "id": 2551513,
+        "name": "Super Scooter",
+        "season": 2,
+        "number": 41,
+        "type": "regular"
+      },
+      {
+        "id": 2551514,
+        "name": "The Lost Web Shooter",
+        "season": 2,
+        "number": 42,
+        "type": "regular"
+      },
+      {
+        "id": 2574950,
+        "name": "Catnap Caper",
+        "season": 2,
+        "number": 43,
+        "type": "regular"
+      },
+      {
+        "id": 2574951,
+        "name": "Bunny Bonanza",
+        "season": 2,
+        "number": 44,
+        "type": "regular"
+      },
+      {
+        "id": 2621290,
+        "name": "Dino-Rama",
+        "season": 2,
+        "number": 45,
+        "type": "regular"
+      },
+      {
+        "id": 2621291,
+        "name": "Daytime at Night",
+        "season": 2,
+        "number": 46,
+        "type": "regular"
+      },
+      {
+        "id": 2621292,
+        "name": "Stolen WEB-Quarters",
+        "season": 2,
+        "number": 47,
+        "type": "regular"
+      },
+      {
+        "id": 2621293,
+        "name": "Spideys in Space!",
+        "season": 2,
+        "number": 48,
+        "type": "regular"
+      },
+      {
+        "id": 2621294,
+        "name": "Hide & Seek",
+        "season": 2,
+        "number": 49,
+        "type": "regular"
+      },
+      {
+        "id": 2621295,
+        "name": "Whale of a Time",
+        "season": 2,
+        "number": 50,
+        "type": "regular"
+      },
+      {
+        "id": 2639408,
+        "name": "Rollin Rhino",
+        "season": 2,
+        "number": 51,
+        "type": "regular"
+      },
+      {
+        "id": 2639409,
+        "name": "The Octopus and the Kitty Cat",
+        "season": 2,
+        "number": 52,
+        "type": "regular"
+      },
+      {
+        "id": 2639413,
+        "name": "Go With the Lava Flow",
+        "season": 2,
+        "number": 53,
+        "type": "regular"
+      },
+      {
+        "id": 2639414,
+        "name": "An UnBEElievable Rosh Hashanah",
+        "season": 2,
+        "number": 54,
+        "type": "regular"
+      },
+      {
+        "id": 2639415,
+        "name": "Bootsie's Haunted Adventure",
+        "season": 2,
+        "number": 55,
+        "type": "regular"
+      },
+      {
+        "id": 2639416,
+        "name": "Too Many Tricks, Not Enough Treats",
+        "season": 2,
+        "number": 56,
+        "type": "regular"
+      },
+      {
+        "id": 2703566,
+        "name": "How to Train Your Doggy",
+        "season": 2,
+        "number": 57,
+        "type": "regular"
+      },
+      {
+        "id": 2703567,
+        "name": "Dome Alone",
+        "season": 2,
+        "number": 58,
+        "type": "regular"
+      },
+      {
+        "id": 2739316,
+        "name": "The Friendly Neighborhood",
+        "season": 3,
+        "number": 1,
+        "type": "regular"
+      },
+      {
+        "id": 2741598,
+        "name": "Flight of the Butterflies",
+        "season": 3,
+        "number": 2,
+        "type": "regular"
+      },
+      {
+        "id": 2739317,
+        "name": "Ock's Obey Ray",
+        "season": 3,
+        "number": 3,
+        "type": "regular"
+      },
+      {
+        "id": 2741599,
+        "name": "Lemur at Large",
+        "season": 3,
+        "number": 4,
+        "type": "regular"
+      },
+      {
+        "id": 2739319,
+        "name": "Tree Trouble",
+        "season": 3,
+        "number": 5,
+        "type": "regular"
+      },
+      {
+        "id": 2741600,
+        "name": "Stuck in Space",
+        "season": 3,
+        "number": 6,
+        "type": "regular"
+      },
+      {
+        "id": 2739322,
+        "name": "Antarctic Adventure",
+        "season": 3,
+        "number": 7,
+        "type": "regular"
+      },
+      {
+        "id": 2741601,
+        "name": "Let It Snowball, Let It Snowball, Let It Snowball",
+        "season": 3,
+        "number": 8,
+        "type": "regular"
+      },
+      {
+        "id": 2739324,
+        "name": "Bubble Trouble",
+        "season": 3,
+        "number": 9,
+        "type": "regular"
+      },
+      {
+        "id": 2741602,
+        "name": "Rainy River Run",
+        "season": 3,
+        "number": 10,
+        "type": "regular"
+      },
+      {
+        "id": 2775823,
+        "name": "The Rhino and the Goose",
+        "season": 3,
+        "number": 11,
+        "type": "regular"
+      },
+      {
+        "id": 2775824,
+        "name": "Dog vs Cat",
+        "season": 3,
+        "number": 12,
+        "type": "regular"
+      },
+      {
+        "id": 2775825,
+        "name": "Journey Through Zola",
+        "season": 3,
+        "number": 13,
+        "type": "regular"
+      },
+      {
+        "id": 2775826,
+        "name": "Villaintines Day",
+        "season": 3,
+        "number": 14,
+        "type": "regular"
+      },
+      {
+        "id": 2775827,
+        "name": "Now You See Me, Now You Don't",
+        "season": 3,
+        "number": 15,
+        "type": "regular"
+      },
+      {
+        "id": 2775828,
+        "name": "Meet Squirrel Girl",
+        "season": 3,
+        "number": 16,
+        "type": "regular"
+      },
+      {
+        "id": 2775829,
+        "name": "Car-Tastrophe",
+        "season": 3,
+        "number": 17,
+        "type": "regular"
+      },
+      {
+        "id": 2775830,
+        "name": "Sandman and the Tortoise",
+        "season": 3,
+        "number": 18,
+        "type": "regular"
+      },
+      {
+        "id": 2827159,
+        "name": "Tiny Car Caper",
+        "season": 3,
+        "number": 19,
+        "type": "regular"
+      },
+      {
+        "id": 2827160,
+        "name": "Toothy Fairy Tricks",
+        "season": 3,
+        "number": 20,
+        "type": "regular"
+      },
+      {
+        "id": 2852463,
+        "name": "Picture Perfect Pandemonium",
+        "season": 3,
+        "number": 21,
+        "type": "regular"
+      },
+      {
+        "id": 2852464,
+        "name": "Catch That Panther Pod",
+        "season": 3,
+        "number": 22,
+        "type": "regular"
+      },
+      {
+        "id": 2852465,
+        "name": "Iron Zola",
+        "season": 3,
+        "number": 23,
+        "type": "regular"
+      },
+      {
+        "id": 2852466,
+        "name": "Aunt May's Birthday Blowout",
+        "season": 3,
+        "number": 24,
+        "type": "regular"
+      },
+      {
+        "id": 2918596,
+        "name": "Freeze, It's Dock Ock!",
+        "season": 3,
+        "number": 25,
+        "type": "regular"
+      },
+      {
+        "id": 2918597,
+        "name": "Go, Go, Jeff",
+        "season": 3,
+        "number": 26,
+        "type": "regular"
+      },
+      {
+        "id": 2918598,
+        "name": "Zola's Novel Idea",
+        "season": 3,
+        "number": 27,
+        "type": "regular"
+      },
+      {
+        "id": 2918599,
+        "name": "Greatest Hits",
+        "season": 3,
+        "number": 28,
+        "type": "regular"
+      },
+      {
+        "id": 3214417,
+        "name": "Go Dino-Webs Go!",
+        "season": 3,
+        "number": 29,
+        "type": "regular"
+      },
+      {
+        "id": 3214418,
+        "name": "Ghost in the Museum",
+        "season": 3,
+        "number": 30,
+        "type": "regular"
+      },
+      {
+        "id": 2967396,
+        "name": "Grow Webs Grow",
+        "season": 3,
+        "number": 31,
+        "type": "regular"
+      },
+      {
+        "id": 2967397,
+        "name": "Rio in Space",
+        "season": 3,
+        "number": 32,
+        "type": "regular"
+      },
+      {
+        "id": 2967412,
+        "name": "The Goblin and the Geyser",
+        "season": 3,
+        "number": 33,
+        "type": "regular"
+      },
+      {
+        "id": 2967413,
+        "name": "Skeleton Stomp",
+        "season": 3,
+        "number": 34,
+        "type": "regular"
+      },
+      {
+        "id": 2981974,
+        "name": "Fool's Gold",
+        "season": 3,
+        "number": 35,
+        "type": "regular"
+      },
+      {
+        "id": 2981975,
+        "name": "The Sundae Save",
+        "season": 3,
+        "number": 36,
+        "type": "regular"
+      },
+      {
+        "id": 2982129,
+        "name": "Adventures in Fossil Hunting",
+        "season": 3,
+        "number": 37,
+        "type": "regular"
+      },
+      {
+        "id": 2982133,
+        "name": "Lizard's Buggy Bonanza",
+        "season": 3,
+        "number": 38,
+        "type": "regular"
+      },
+      {
+        "id": 2989074,
+        "name": "Odd Bot Team Up",
+        "season": 3,
+        "number": 39,
+        "type": "regular"
+      },
+      {
+        "id": 2989075,
+        "name": "The Lost King",
+        "season": 3,
+        "number": 40,
+        "type": "regular"
+      },
+      {
+        "id": 3036036,
+        "name": "Robo-Spideys",
+        "season": 3,
+        "number": 41,
+        "type": "regular"
+      },
+      {
+        "id": 3036037,
+        "name": "Saber-Toothed Kitten",
+        "season": 3,
+        "number": 42,
+        "type": "regular"
+      },
+      {
+        "id": 3402545,
+        "name": "The Curse of the Corn Dog King",
+        "season": 3,
+        "number": 43,
+        "type": "regular"
+      },
+      {
+        "id": 3402546,
+        "name": "Zola's Halloween Heist",
+        "season": 3,
+        "number": 44,
+        "type": "regular"
+      },
+      {
+        "id": 3036040,
+        "name": "Moon Girl and the Dino Dilemma",
+        "season": 3,
+        "number": 45,
+        "type": "regular"
+      },
+      {
+        "id": 3036041,
+        "name": "Hulk's Squirrley Switch",
+        "season": 3,
+        "number": 46,
+        "type": "regular"
+      },
+      {
+        "id": 3036038,
+        "name": "Tree House Takeover",
+        "season": 3,
+        "number": 47,
+        "type": "regular"
+      },
+      {
+        "id": 3036039,
+        "name": "The Incredible Shrinking Zola",
+        "season": 3,
+        "number": 48,
+        "type": "regular"
+      },
+      {
+        "id": 3079772,
+        "name": "Tricky Tricky Trapster",
+        "season": 3,
+        "number": 49,
+        "type": "regular"
+      },
+      {
+        "id": 3079773,
+        "name": "Tractor Beam Trouble",
+        "season": 3,
+        "number": 50,
+        "type": "regular"
+      },
+      {
+        "id": 3046566,
+        "name": "A Snow Day For Aunt May",
+        "season": 3,
+        "number": 51,
+        "type": "regular"
+      },
+      {
+        "id": 3046567,
+        "name": "Hanukkah Heist",
+        "season": 3,
+        "number": 52,
+        "type": "regular"
+      },
+      {
+        "id": 3116297,
+        "name": "The Campout Mystery",
+        "season": 3,
+        "number": 55,
+        "type": "regular"
+      },
+      {
+        "id": 3116298,
+        "name": "Gobby's Metal Menace",
+        "season": 3,
+        "number": 56,
+        "type": "regular"
+      },
+      {
+        "id": 3154699,
+        "name": "Dinosaurs on the Loose",
+        "season": 3,
+        "number": 57,
+        "type": "regular"
+      },
+      {
+        "id": 3154700,
+        "name": "WEB-STER'S Big Bad Bug",
+        "season": 3,
+        "number": 58,
+        "type": "regular"
+      },
+      {
+        "id": 3183241,
+        "name": "Groundhog's Day Out",
+        "season": 3,
+        "number": 59,
+        "type": "regular"
+      },
+      {
+        "id": 3183242,
+        "name": "Ploofy Power",
+        "season": 3,
+        "number": 60,
+        "type": "regular"
+      },
+      {
+        "id": 3402547,
+        "name": "Too Many Zolas",
+        "season": 3,
+        "number": 61,
+        "type": "regular"
+      },
+      {
+        "id": 3402548,
+        "name": "Electro's Glow Show",
+        "season": 3,
+        "number": 62,
+        "type": "regular"
+      },
+      {
+        "id": 3263403,
+        "name": "Voyage to Spider Island",
+        "season": 4,
+        "number": 1,
+        "type": "regular"
+      },
+      {
+        "id": 3268200,
+        "name": "Superhero Soak",
+        "season": 4,
+        "number": 2,
+        "type": "regular"
+      },
+      {
+        "id": 3268201,
+        "name": "Giant-Sized Lizard",
+        "season": 4,
+        "number": 3,
+        "type": "regular"
+      },
+      {
+        "id": 3268202,
+        "name": "Rhino's Wild Bunch",
+        "season": 4,
+        "number": 4,
+        "type": "regular"
+      },
+      {
+        "id": 3268203,
+        "name": "The Bots vs. Ock",
+        "season": 4,
+        "number": 5,
+        "type": "regular"
+      },
+      {
+        "id": 3268204,
+        "name": "The Battery Boost",
+        "season": 4,
+        "number": 6,
+        "type": "regular"
+      },
+      {
+        "id": 3268205,
+        "name": "King Lizard",
+        "season": 4,
+        "number": 7,
+        "type": "regular"
+      },
+      {
+        "id": 3268206,
+        "name": "Go Rhino Go",
+        "season": 4,
+        "number": 8,
+        "type": "regular"
+      },
+      {
+        "id": 3268207,
+        "name": "Campout Chaos",
+        "season": 4,
+        "number": 9,
+        "type": "regular"
+      },
+      {
+        "id": 3268208,
+        "name": "Panther Pod to the Rescue",
+        "season": 4,
+        "number": 10,
+        "type": "regular"
+      },
+      {
+        "id": 3268209,
+        "name": "Two Teleporters Too Many",
+        "season": 4,
+        "number": 11,
+        "type": "regular"
+      },
+      {
+        "id": 3268210,
+        "name": "Dinos Are Forever",
+        "season": 4,
+        "number": 12,
+        "type": "regular"
+      },
+      {
+        "id": 3296874,
+        "name": "The Lost Lair of Web-Beard",
+        "season": 4,
+        "number": 13,
+        "type": "regular"
+      },
+      {
+        "id": 3296875,
+        "name": "Captain Gobby",
+        "season": 4,
+        "number": 14,
+        "type": "regular"
+      },
+      {
+        "id": 3402549,
+        "name": "Mixing Up Trouble",
+        "season": 4,
+        "number": 15,
+        "type": "regular"
+      },
+      {
+        "id": 3402550,
+        "name": "To Catch a Cat",
+        "season": 4,
+        "number": 16,
+        "type": "regular"
+      },
+      {
+        "id": 3402551,
+        "name": "How to Catch a Caterpillar",
+        "season": 4,
+        "number": 17,
+        "type": "regular"
+      },
+      {
+        "id": 3402552,
+        "name": "A Jellyfish Tale",
+        "season": 4,
+        "number": 18,
+        "type": "regular"
+      },
+      {
+        "id": 3402553,
+        "name": "Night of the Goblins",
+        "season": 4,
+        "number": 19,
+        "type": "regular"
+      },
+      {
+        "id": 3402554,
+        "name": "Bat Attitude",
+        "season": 4,
+        "number": 20,
+        "type": "regular"
+      },
+      {
+        "id": 3402555,
+        "name": "Saving Spider Island",
+        "season": 4,
+        "number": 21,
+        "type": "regular"
+      },
+      {
+        "id": 3402556,
+        "name": "A Ribbiting Rescue",
+        "season": 4,
+        "number": 22,
+        "type": "regular"
+      },
+      {
+        "id": 3402557,
+        "name": "A Squirrel Girl and Tippy Toe Pirate Adventure",
+        "season": 4,
+        "number": 23,
+        "type": "regular"
+      },
+      {
+        "id": 3402558,
+        "name": "Knight at the Museum",
+        "season": 4,
+        "number": 24,
+        "type": "regular"
+      },
+      {
+        "id": 3402559,
+        "name": "The Greedy Gobbler",
+        "season": 4,
+        "number": 25,
+        "type": "regular"
+      },
+      {
+        "id": 3402560,
+        "name": "Playpen Pandemonium",
+        "season": 4,
+        "number": 26,
+        "type": "regular"
+      },
+      {
+        "id": 3686941,
+        "name": "The Candlelight Christmas Walk",
+        "season": 4,
+        "number": 27,
+        "type": "regular"
+      },
+      {
+        "id": 3686942,
+        "name": "The Santa Trap",
+        "season": 4,
+        "number": 28,
+        "type": "regular"
+      },
+      {
+        "id": 3686949,
+        "name": "The Treasure of Billie the Pirate",
+        "season": 4,
+        "number": 29,
+        "type": "regular"
+      },
+      {
+        "id": 3686950,
+        "name": "Big City, Little Land Shark",
+        "season": 4,
+        "number": 30,
+        "type": "regular"
+      },
+      {
+        "id": 3686951,
+        "name": "A Helping Handful",
+        "season": 4,
+        "number": 31,
+        "type": "regular"
+      },
+      {
+        "id": 3686952,
+        "name": "Adventures Down the Drain",
+        "season": 4,
+        "number": 32,
+        "type": "regular"
+      },
+      {
+        "id": 3686953,
+        "name": "Dolphins on Duty",
+        "season": 4,
+        "number": 33,
+        "type": "regular"
+      },
+      {
+        "id": 3686954,
+        "name": "Gobby's Trash Day Takeover",
+        "season": 4,
+        "number": 34,
+        "type": "regular"
+      },
+      {
+        "id": 3686955,
+        "name": "Motorcycle Madness",
+        "season": 4,
+        "number": 35,
+        "type": "regular"
+      },
+      {
+        "id": 3686956,
+        "name": "Oops! I Shrank WEB-Quarters",
+        "season": 4,
+        "number": 36,
+        "type": "regular"
+      },
+      {
+        "id": 3686957,
+        "name": "The Return of Web-Beard",
+        "season": 4,
+        "number": 37,
+        "type": "regular"
+      },
+      {
+        "id": 3686958,
+        "name": "Sandman vs Hydro-Man",
+        "season": 4,
+        "number": 38,
+        "type": "regular"
+      },
+      {
+        "id": 3641298,
+        "name": "Lights, Sirens, Action",
+        "season": 5,
+        "number": 1,
+        "type": "regular"
+      },
+      {
+        "id": 3671789,
+        "name": "Symbies Slimy Scheme",
+        "season": 5,
+        "number": 2,
+        "type": "regular"
+      },
+      {
+        "id": 3671790,
+        "name": "One Fantastic Surprise Party",
+        "season": 5,
+        "number": 3,
+        "type": "regular"
+      },
+      {
+        "id": 3671791,
+        "name": "Kitty Cat Chaos",
+        "season": 5,
+        "number": 4,
+        "type": "regular"
+      },
+      {
+        "id": 3671792,
+        "name": "Remote Controlled Zola",
+        "season": 5,
+        "number": 5,
+        "type": "regular"
+      },
+      {
+        "id": 3671793,
+        "name": "Super Cat",
+        "season": 5,
+        "number": 6,
+        "type": "regular"
+      },
+      {
+        "id": 3671794,
+        "name": "Sandman's Mountain Mayhem",
+        "season": 5,
+        "number": 7,
+        "type": "regular"
+      },
+      {
+        "id": 3671795,
+        "name": "Pufferfish Problems",
+        "season": 5,
+        "number": 8,
+        "type": "regular"
+      },
+      {
+        "id": 3671796,
+        "name": "Aunt May's Flying House",
+        "season": 5,
+        "number": 9,
+        "type": "regular"
+      },
+      {
+        "id": 3671797,
+        "name": "Spiders vs Flies!",
+        "season": 5,
+        "number": 10,
+        "type": "regular"
+      },
+      {
+        "id": 3716244,
+        "name": "Silk Swings In",
+        "season": 5,
+        "number": 17,
+        "type": "regular"
+      },
+      {
+        "id": 3716245,
+        "name": "Gobby and Rhino's Webby Adventure",
+        "season": 5,
+        "number": 18,
+        "type": "regular"
+      },
+      {
+        "id": 3716246,
+        "name": "It's Raining Pranks",
+        "season": 5,
+        "number": 19,
+        "type": "regular"
+      },
+      {
+        "id": 3716247,
+        "name": "Jeff Bites Back",
+        "season": 5,
+        "number": 20,
+        "type": "regular"
+      }
+    ],
+    "lists": [
+      {
+        "id": 1223,
+        "broadcast_premiere": true,
+        "dvd_release": false,
+        "verbatim_order": false,
+        "language_premiere": false
+      },
+      {
+        "id": 3259,
+        "broadcast_premiere": false,
+        "dvd_release": false,
+        "verbatim_order": false,
+        "language_premiere": false
+      }
+    ],
+    "alternates": {
+      "1223": [
+        {
+          "id": 9541,
+          "name": "Spidey to the Power of Three",
+          "season": 1,
+          "number": 1,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2115523,
+                "name": "Spidey to the Power of Three",
+                "season": 1,
+                "number": 1,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9542,
+          "name": "Panther Patience",
+          "season": 1,
+          "number": 2,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134709,
+                "name": "Panther Patience",
+                "season": 1,
+                "number": 2,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9543,
+          "name": "Lost and Found",
+          "season": 1,
+          "number": 3,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134711,
+                "name": "Lost and Found",
+                "season": 1,
+                "number": 4,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9544,
+          "name": "Doc Ock's Super Octopus",
+          "season": 1,
+          "number": 4,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134712,
+                "name": "Doc Ock's Super Octopus",
+                "season": 1,
+                "number": 5,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9545,
+          "name": "Attack of the Green Giggles",
+          "season": 1,
+          "number": 5,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134713,
+                "name": "Attack of the Green Giggles",
+                "season": 1,
+                "number": 6,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9548,
+          "name": "Bug in the System",
+          "season": 1,
+          "number": 6,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134714,
+                "name": "Bug in the System",
+                "season": 1,
+                "number": 7,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9549,
+          "name": "Test Your Super Strength",
+          "season": 1,
+          "number": 7,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134715,
+                "name": "Test Your Super Strength",
+                "season": 1,
+                "number": 8,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9550,
+          "name": "Pecking Prankster Pigeons",
+          "season": 1,
+          "number": 8,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134716,
+                "name": "Pecking Prankster Pigeons",
+                "season": 1,
+                "number": 9,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9551,
+          "name": "Green Thumb",
+          "season": 1,
+          "number": 9,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2134717,
+                "name": "Green Thumb",
+                "season": 1,
+                "number": 10,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9552,
+          "name": "Mother's Day Mayhem",
+          "season": 1,
+          "number": 10,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2155252,
+                "name": "Mother's Day Mayhem",
+                "season": 1,
+                "number": 11,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9555,
+          "name": "Not-So-Fun House",
+          "season": 1,
+          "number": 11,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2155253,
+                "name": "Not-So-Fun House",
+                "season": 1,
+                "number": 12,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9556,
+          "name": "Camping Conundrum",
+          "season": 1,
+          "number": 12,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2155254,
+                "name": "Camping Conundrum",
+                "season": 1,
+                "number": 13,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9557,
+          "name": "The Great Green Crime Spree",
+          "season": 1,
+          "number": 13,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2155255,
+                "name": "The Great Green Crime Spree",
+                "season": 1,
+                "number": 14,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9558,
+          "name": "Rocket Rhino!",
+          "season": 1,
+          "number": 14,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2177079,
+                "name": "Rocket Rhino!",
+                "season": 1,
+                "number": 15,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 9559,
+          "name": "Trick or TRACE-E",
+          "season": 1,
+          "number": 15,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2177080,
+                "name": "Trick or TRACE-E",
+                "season": 1,
+                "number": 16,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 10532,
+          "name": "A Very Spidey Christmas",
+          "season": 1,
+          "number": 16,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2199690,
+                "name": "A Very Spidey Christmas",
+                "season": 1,
+                "number": 23,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 10533,
+          "name": "Gobby on Ice",
+          "season": 1,
+          "number": 17,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2199691,
+                "name": "Gobby on Ice",
+                "season": 1,
+                "number": 24,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "3259": [
+        {
+          "id": 30388,
+          "name": "Picture Perfect Pandemonium",
+          "season": 3,
+          "number": 21,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2852463,
+                "name": "Picture Perfect Pandemonium",
+                "season": 3,
+                "number": 21,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 30389,
+          "name": "Catch That Panther Pod",
+          "season": 3,
+          "number": 22,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2852464,
+                "name": "Catch That Panther Pod",
+                "season": 3,
+                "number": 22,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 30390,
+          "name": "Iron Zola",
+          "season": 3,
+          "number": 23,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2852465,
+                "name": "Iron Zola",
+                "season": 3,
+                "number": 23,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 30391,
+          "name": "Aunt May's Birthday Blowout",
+          "season": 3,
+          "number": 24,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2852466,
+                "name": "Aunt May's Birthday Blowout",
+                "season": 3,
+                "number": 24,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 30780,
+          "name": "Freeze, It's Dock Ock!",
+          "season": 3,
+          "number": 25,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2918596,
+                "name": "Freeze, It's Dock Ock!",
+                "season": 3,
+                "number": 25,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 30781,
+          "name": "Go, Go, Jeff",
+          "season": 3,
+          "number": 26,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2918597,
+                "name": "Go, Go, Jeff",
+                "season": 3,
+                "number": 26,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 30782,
+          "name": "Zola's Novel Idea",
+          "season": 3,
+          "number": 27,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2918598,
+                "name": "Zola's Novel Idea",
+                "season": 3,
+                "number": 27,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 30783,
+          "name": "Greatest Hits",
+          "season": 3,
+          "number": 28,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 2918599,
+                "name": "Greatest Hits",
+                "season": 3,
+                "number": 28,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 43081,
+          "name": "Moon Girl and the Dino Dilemma",
+          "season": 3,
+          "number": 43,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3036040,
+                "name": "Moon Girl and the Dino Dilemma",
+                "season": 3,
+                "number": 45,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 43082,
+          "name": "Hulk's Squirrley Switch",
+          "season": 3,
+          "number": 44,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3036041,
+                "name": "Hulk's Squirrley Switch",
+                "season": 3,
+                "number": 46,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 43085,
+          "name": "A Snow Day For Aunt May",
+          "season": 3,
+          "number": 45,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3046566,
+                "name": "A Snow Day For Aunt May",
+                "season": 3,
+                "number": 51,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": 43086,
+          "name": "Hanukkah Heist",
+          "season": 3,
+          "number": 46,
+          "type": "regular",
+          "_embedded": {
+            "episodes": [
+              {
+                "id": 3046567,
+                "name": "Hanukkah Heist",
+                "season": 3,
+                "number": 52,
+                "_links": {
+                  "show": {
+                    "href": "https://api.tvmaze.com/shows/43708",
+                    "name": "Spidey and His Amazing Friends"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
