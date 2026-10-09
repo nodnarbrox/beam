@@ -84,7 +84,7 @@ class RcloneService {
       '--rc-serve',
     ];
 
-    appLogger.i('Starting rclone rcd: $binaryPath ${args.join(' ')}');
+    appLogger.i('Starting rclone rcd on localhost:$_port (authentication enabled)');
     final proc = await Process.start(
       binaryPath,
       args,

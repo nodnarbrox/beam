@@ -12,5 +12,6 @@ jobs:
           git clone --depth 1 --branch 3.44.8 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - run: flutter pub get
+      - run: python3 -m unittest discover -s test/release -v
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub --concurrency=1 test/navigation/navigation_tabs_test.dart test/screens/video_store_remote_test.dart test/services/direct_tv_service_test.dart test/screens/direct_tv_screen_test.dart test/widgets/side_navigation_rail_test.dart test/screens/main_screen_layout_test.dart

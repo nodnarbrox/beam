@@ -1,7 +1,7 @@
 name: plezy
 description: "Beam media center with a Halloween video store"
 publish_to: "none"
-version: 2.10.0+4244
+version: 2.10.1+4245
 
 environment:
   sdk: ">=3.12.0 <4.0.0"
@@ -139,6 +139,7 @@ sentry:
 flutter:
   uses-material-design: true
   assets:
+    - assets/NATIVE_NOTICES.txt
     - assets/store3d/
     - assets/plezy.png
     - assets/plezy_adaptive_foreground.svg

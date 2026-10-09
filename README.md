@@ -2,7 +2,7 @@
 
 A media-center app based on [Plezy](https://github.com/edde746/plezy), with Plex and Jellyfin libraries, a Halloween Blockbusta video store, TV remote navigation and optional streaming services.
 
-This repository is a **sanitized source preview**. It is independently maintained and is not an official Plezy release. No installable APK is published yet. The upstream GPLv3 license and third-party notices remain included.
+Beam is independently maintained and is not an official Plezy release. Android beta builds target **armeabi-v7a**, the 32-bit Onn architecture. APKs, application source, native source and checksums are available from [GitHub Releases](https://github.com/nodnarbrox/beam/releases). The upstream GPLv3 license and third-party notices remain included.
 
 The separate Beam search tab is removed. Use Search for browsing and Settings → Beam streaming for streaming configuration. The store opens with the newer Halloween layout, scrolling racks and haunted props.
 
@@ -16,7 +16,7 @@ flutter analyze --no-pub
 flutter test --no-pub test/navigation/navigation_tabs_test.dart test/screens/video_store_remote_test.dart test/services/direct_tv_service_test.dart test/screens/direct_tv_screen_test.dart
 ```
 
-Android development also requires SDK 36, NDK 29.0.14206865 and CMake 3.31.6. The native library inventory and exact corresponding-source checks must be completed before distributing an APK. Native libtorrent must be rebuilt from this repository's patched source; substituting an unpatched upstream binary changes its ABI and privacy behavior. Previously bundled native binaries are deliberately excluded from this source preview. Emulator cores and firmware are not included. See emulator_plugins/README.md for the optional core build path.
+Android development also requires SDK 36, NDK 29.0.14206865 and CMake 3.31.6. See [NATIVE_BUILD.md](NATIVE_BUILD.md) for the exact native source and build record. Native libtorrent must be rebuilt from this repository's patched source; substituting an unpatched upstream binary changes its ABI and privacy behavior. Native binaries and signing keys are not committed to Git. Emulator cores and firmware are not included. See emulator_plugins/README.md for the optional core build path.
 
 ## Configuration
 
@@ -26,7 +26,7 @@ Optional Trakt, MyAnimeList, Simkl and YouTube account integrations require the 
 
 ## Status
 
-The source includes fixes for store focus handoff, Back navigation, reversed turns and repeated OK activation. Physical Onn remote behavior and 3D performance still require actual-device verification. See BEAM_CHANGES.md for the scope and remaining release checks.
+The source includes fixes for store focus handoff, Back navigation, reversed turns and repeated OK activation. Release notes distinguish automated checks, on-device Android key-event tests and remaining physical-remote/performance limits. See BEAM_CHANGES.md for the change scope.
 
 ## License and attribution
 

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "targetAbi": "armeabi-v7a",
+  "nativeArtifacts": [
+    {
+      "path": "android/app/libs/libretrodroid-0.14.0.aar",
+      "sha256": "cd987ed8d0e2af1410b1ad81f53df2163339e3ae4105b8906a7fdc314998b414",
+      "bytes": 1915195,
+      "sourceComponent": "sources/LibretroDroid-0.14.0-source.tar.gz",
+      "license": "GPL-3.0-only",
+      "provenance": "SHA-256 and ZIP contents match the official JitPack 0.14.0 AAR"
+    },
+    {
+      "path": "android/app/src/main/jniLibs/armeabi-v7a/librclone.so",
+      "sha256": "e17bcdb2a359e19afeb7400fd1bb514ff48441f0e1fb53181f6fe3e5fb1dafad",
+      "bytes": 57213090,
+      "sourceComponent": "rclone-vendored/go.mod",
+      "license": "MIT and bundled dependency notices",
+      "provenance": "Fresh Go 1.26.1 build of the exact accompanying vendored rclone 1.68.2 source; trimpath enabled"
+    },
+    {
+      "path": "packages/libtorrent_flutter/prebuilt/android/armeabi-v7a/liblibtorrent_flutter.so",
+      "sha256": "81f120df531c1fd2bc8d819bbfd5cf107e53e00c39bf7e19e9985f9acc926dcc",
+      "bytes": 8095140,
+      "sourceComponent": "sources/libtorrent-2.0.11.tar.gz",
+      "license": "BSD-3-Clause; Apache-2.0; BSL-1.0",
+      "provenance": "Patched repository bridge freshly rebuilt with the recorded compiler and identified dependency sources"
+    }
+  ],
+  "nativeSourceBundleSha256": "caac612f94b66a5f4f2e7980f03b7fb6c3aef73be05ecdb8477d12ddfcfe1863",
+  "audit": "Automated build, source-delivery and license inventory; no human/legal certification"
+}

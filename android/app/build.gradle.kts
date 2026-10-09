@@ -59,6 +59,10 @@ plugins {
 }
 
 val mpvVersion = "v1.0.7"
+// Flutter otherwise resets defaultConfig's ABI list after this script runs.
+if (findProperty("beam.nativeAbis") != null) {
+  extensions.extraProperties.set("disable-abi-filtering", true)
+}
 // Plugins are reviewed and staged at build time; no runtime code downloader.
 val emulatorPluginOutput = rootProject.projectDir.parentFile.resolve("build/emulator_plugins")
 val stageEmulatorPlugins = tasks.register<Exec>("stageEmulatorPlugins") {
@@ -131,17 +135,10 @@ val extractMpvLibcxx = tasks.register("extractMpvLibcxx") {
   doLast {
     outDir.deleteRecursively() // drop stale ABIs from a previous AAR version
     outDir.mkdirs()
-    providers.exec {
-      commandLine(
-        "unzip",
-        "-q",
-        "-o",
-        aar.absolutePath,
-        "jni/*/libc++_shared.so",
-        "-d",
-        outDir.absolutePath
-      )
-    }.result.get().assertNormalExitValue()
+    project.copy {
+      from(zipTree(aar)) { include("jni/*/libc++_shared.so") }
+      into(outDir)
+    }
   }
 }
 
@@ -352,6 +349,12 @@ android {
 
   defaultConfig {
     applicationId = "com.edde746.plezy"
+    // A release must contain native dependencies for every ABI it advertises.
+    (findProperty("beam.nativeAbis") as String?)?.let { requested ->
+      val abis = requested.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+      require(abis.isNotEmpty() && abis.all { it in listOf("armeabi-v7a", "arm64-v8a", "x86_64") })
+      ndk { abiFilters.addAll(abis) }
+    }
     // You can update the following values to match your application needs.
     // For more information, see: https://flutter.dev/to/review-gradle-config.
     minSdk = 25 // Fire OS 6.x (API 25); overrides libmpv-android's minSdk=26

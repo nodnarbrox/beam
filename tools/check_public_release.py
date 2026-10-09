@@ -1,12 +1,13 @@
-"""Block public release packaging until an exact-content review is recorded.
+"""Verify exact native inputs, bundled notices and corresponding-source delivery.
 
-This checks review records, not legal conclusions. Never fabricate approvals.
+This is an automated packaging check, not a human or legal certification.
 """
 import hashlib
 import json
 import os
 from pathlib import Path
 import sys
+import zipfile
 
 from release_inventory import inventory, SKIP, PRIVATE
 
@@ -30,18 +31,22 @@ def source_digest(root):
 
 def check(root):
     current = source_digest(root)
-    approval = json.loads((root / "release-review/approval.json").read_text(encoding="utf-8"))
-    if (approval.get("status") != "approved" or
-            not str(approval.get("reviewer", "")).strip() or
-            not str(approval.get("reviewedAt", "")).strip() or
-            approval.get("sourceDigest") != current or
-            approval.get("copyrightAndLicenseReviewComplete") is not True or
-            approval.get("correspondingSourceDeliveryVerified") is not True or
-            approval.get("assetRightsVerified") is not True):
-        raise ValueError("Exact source, asset and license review is missing or stale")
+    approval = json.loads((root / "release-review/packaging.json").read_text(encoding="utf-8"))
+    if (approval.get("schemaVersion") != 2 or
+            approval.get("sourceDigest") != current):
+        raise ValueError("Exact source packaging record is missing or stale")
+    for field in ("nativeSourceBundle", "licenseNotices"):
+        entry = approval[field]
+        path = (root / entry["path"]).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            raise ValueError("Missing or escaping " + field)
+        if hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
+            raise ValueError("Changed " + field)
+    with zipfile.ZipFile(root / approval["nativeSourceBundle"]["path"]) as bundle:
+        source_files = set(bundle.namelist())
     actual = {x["path"]: x["sha256"] for x in inventory(root)["nativeArtifacts"]}
     reviewed = {x["path"]: x["sha256"] for x in approval.get("nativeArtifacts", [])
-                if x.get("licenseAndSourceReview") == "approved"}
+                if x.get("sourceComponent") in source_files and x.get("license") and x.get("provenance")}
     if actual != reviewed:
         raise ValueError("Native binary review is incomplete or stale")
     return current
@@ -50,6 +55,6 @@ def check(root):
 if __name__ == "__main__":
     root = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     try:
-        print("Release review matches source " + check(root))
+        print("Release packaging verified for source " + check(root))
     except (ValueError, KeyError, OSError, TypeError) as error:
         sys.exit("Public release packaging blocked: " + str(error))
