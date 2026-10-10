@@ -29,14 +29,22 @@ On a Mac with Xcode and CocoaPods, install Homebrew `cmake` and
 
 ```sh
 bash packages/libtorrent_flutter/build_macos.sh
-flutter build macos --release --no-pub
+python3 tools/map_generated_plugin_uri.py
+flutter build macos --release --no-pub --split-debug-info=/private/symbols/directory
 ```
 
 The native bridge and OpenSSL libraries are supplied through the local CocoaPod.
 Before packaging, check all Mach-O dependencies, embed any required dylibs in
 `Beam.app/Contents/Frameworks`, and sign the completed app. A local ad-hoc
 signature is not an Apple Developer ID signature or notarization. Label an
-ad-hoc build accordingly. This build targets macOS 14 or newer.
+ad-hoc build accordingly. The source project's deployment baseline is macOS 14.
+
+The current Homebrew dependency build requires macOS 26 or newer. Package it with
+`tools/package_macos.py --app PATH/Beam.app --entitlements macos/Runner/Release.entitlements --audit audit.json`;
+the tool bundles dependencies, sets that minimum version, checks arm64 libraries
+and verifies the ad-hoc signature. It retains only arm64 code and removes debug
+and Swift module build metadata. Keep split debug symbols outside the app.
+The audit is a local build record, not app data.
 
 The Android native-source companion is documented separately in NATIVE_BUILD.md.
 Desktop native dependencies retain their upstream licenses and source locations:
