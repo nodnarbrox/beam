@@ -2,13 +2,13 @@
 
 A media-center app based on [Plezy](https://github.com/edde746/plezy), with Plex and Jellyfin libraries, a Halloween Blockbusta video store, TV remote navigation and optional streaming services.
 
-Beam is independently maintained and is not an official Plezy release. Android beta builds target **armeabi-v7a**, the 32-bit Onn architecture. APKs, application source, native source and checksums are available from [GitHub Releases](https://github.com/nodnarbrox/beam/releases). The upstream GPLv3 license and third-party notices remain included.
+Beam is independently maintained and is not an official Plezy release. Beta releases include Android **armeabi-v7a** (32-bit Onn), Windows **x64**, Linux **x64**, and macOS **arm64** packages. Builds, application source, Android native source and checksums are available from [GitHub Releases](https://github.com/nodnarbrox/beam/releases). The upstream GPLv3 license and third-party notices remain included. The current Mac build requires macOS 26 or newer and is ad-hoc signed, without Apple notarization. Linux requires its system runtime libraries. See [DESKTOP_BUILD.md](DESKTOP_BUILD.md) for platform requirements.
 
 The separate Beam search tab is removed. Use Search for browsing and Settings → Beam streaming for streaming configuration. The store opens with the newer Halloween layout, scrolling racks and haunted props.
 
 ## Development
 
-Use Flutter **3.44.8** and Dart 3.12.2; the store uses flutter_scene 0.16.0. Dependencies requiring forked Git revisions are vendored at their pinned revisions under packages/vendor.
+Use Flutter **3.44.8** and Dart 3.12.2; Windows uses **3.44.0** to match its pinned patched video-compositing engine. The store uses flutter_scene 0.16.0. Dependencies requiring forked Git revisions are vendored at their pinned revisions under packages/vendor.
 
 ```sh
 flutter pub get

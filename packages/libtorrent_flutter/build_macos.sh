@@ -50,11 +50,16 @@ echo "=== Bundling OpenSSL dylibs..."
 
 for dest in "$MACOS_DIR" "$PREBUILT_DIR"; do
     mkdir -p "$dest"
+    # Homebrew dylibs may retain read-only modes after the first copy.
+    for name in liblibtorrent_flutter.dylib libssl.3.dylib libcrypto.3.dylib; do
+        if [ -f "$dest/$name" ]; then chmod u+w "$dest/$name"; fi
+    done
     cp "$DYLIB" "$dest/"
 
     # Copy OpenSSL dylibs
     cp "$OPENSSL_PREFIX/lib/libssl.3.dylib" "$dest/"
     cp "$OPENSSL_PREFIX/lib/libcrypto.3.dylib" "$dest/"
+    chmod u+w "$dest/libssl.3.dylib" "$dest/libcrypto.3.dylib"
 
     # Fix libssl's reference to libcrypto
     install_name_tool -change "$OPENSSL_PREFIX/lib/libcrypto.3.dylib" "@loader_path/libcrypto.3.dylib" "$dest/libssl.3.dylib"

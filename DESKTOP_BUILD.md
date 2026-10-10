@@ -1,6 +1,6 @@
 # Beam desktop builds
 
-Use Flutter 3.44.8 and the checked-in pubspec.lock. Run `flutter pub get`
+Use Flutter 3.44.8 (Windows: 3.44.0) and the checked-in pubspec.lock. Run `flutter pub get`
 before each platform build. Desktop torrent bridges compile the repository's
 patched C++ source; downloading an upstream unpatched binary is disabled by
 default. Keep native binaries, SDK paths and signing material out of Git.
@@ -9,9 +9,21 @@ default. Keep native binaries, SDK paths and signing material out of Git.
 
 Install Visual Studio 2022 C++ desktop build tools and vcpkg's
 `libtorrent:x64-windows` package. Set `VCPKG_ROOT` to that vcpkg checkout,
-then run `flutter build windows --release --no-pub`. Distribute the entire
+and use an isolated Flutter 3.44.0 SDK. Run `flutter precache --windows`, then
+`windows/tool/install-patched-engine.ps1`. The installer verifies the pinned
+DirectComposition engine archive hash and matching SDK engine revision. This
+engine is required for the Flutter controls to composite over the mpv video.
+Do not substitute a stock engine or bypass the version check.
+
+Run `python tools/map_generated_plugin_uri.py`, then
+`flutter build windows --release --no-pub --split-debug-info=PATH/TO/SYMBOLS`.
+Distribute the entire
 `build/windows/x64/runner/Release` directory, including DLLs and data, rather
 than the executable alone. Launch `Beam.exe` from that directory.
+Include the bridge's transitive DLL dependencies from vcpkg's release `bin`
+directory and the corresponding Microsoft Visual C++ runtime DLLs; check PE
+imports and load the packaged bridge before distributing. Keep PDB files and
+split debug symbols outside the public archive.
 
 ## Linux x64
 
