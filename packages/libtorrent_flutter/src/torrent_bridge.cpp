@@ -32,6 +32,7 @@
 #include <libtorrent/magnet_uri.hpp>
 #include <libtorrent/error_code.hpp>
 #include <libtorrent/version.hpp>
+#include <libtorrent/load_torrent.hpp>
 #include <libtorrent/file_storage.hpp>
 #include <libtorrent/download_priority.hpp>
 
@@ -2201,11 +2202,10 @@ TORRENT_API lt_torrent_id lt_add_torrent_file(lt_session_t session,
     auto* sw = to_sw(session);
     try {
         lt::error_code ec;
-        // The throwing filename constructor is supported by both 2.0 and
-        // 2.1; the latter removed the error_code overload from its current ABI.
-        auto ti = std::make_shared<lt::torrent_info>(std::string(fp));
-        lt::add_torrent_params atp;
-        atp.ti = ti; atp.save_path = path;
+        // The dedicated loader is supported by both libtorrent 2.0 and 2.1.
+        // Deprecated torrent_info filename constructors are absent in ABI 100.
+        auto atp = lt::load_torrent_file(std::string(fp));
+        atp.save_path = path;
         atp.flags &= ~lt::torrent_flags::paused;
         atp.flags &= ~lt::torrent_flags::auto_managed;
 

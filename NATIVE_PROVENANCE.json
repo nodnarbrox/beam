@@ -12,8 +12,8 @@
     },
     {
       "path": "android/app/src/main/jniLibs/armeabi-v7a/liblibtorrent_flutter.so",
-      "sha256": "6058a177c7bf991c9a9857d083cbd4cfcf835610ef683182c3bdc7d64ffa5b21",
-      "bytes": 13048848,
+      "sha256": "5ad7715d9a17ce148ff81eda4cd11afe013c815d20030461b934a6c180f8025c",
+      "bytes": 13053788,
       "sourceComponent": "sources/libtorrent-2.0.11.tar.gz",
       "license": "BSD-3-Clause; Apache-2.0; BSL-1.0",
       "provenance": "Patched repository bridge freshly rebuilt with the recorded compiler and identified dependency sources; local diagnostic build paths normalized by tools/sanitize_native_paths.py"
@@ -28,8 +28,8 @@
     },
     {
       "path": "packages/libtorrent_flutter/prebuilt/android/armeabi-v7a/liblibtorrent_flutter.so",
-      "sha256": "6058a177c7bf991c9a9857d083cbd4cfcf835610ef683182c3bdc7d64ffa5b21",
-      "bytes": 13048848,
+      "sha256": "5ad7715d9a17ce148ff81eda4cd11afe013c815d20030461b934a6c180f8025c",
+      "bytes": 13053788,
       "sourceComponent": "sources/libtorrent-2.0.11.tar.gz",
       "license": "BSD-3-Clause; Apache-2.0; BSL-1.0",
       "provenance": "Patched repository bridge freshly rebuilt with the recorded compiler and identified dependency sources; local diagnostic build paths normalized by tools/sanitize_native_paths.py"
