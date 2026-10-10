@@ -125,6 +125,14 @@ set(ENV{SENTRY_NATIVE_BACKEND} "inproc")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# JNI is a transitive Android HTTP dependency. Desktop Beam never starts a JVM;
+# delay-load it so the unused FFI library does not require Java at app startup.
+# The plugin's upstream CMake uses an undefined target for this option.
+if(TARGET jni)
+  target_link_options(jni PRIVATE "/DELAYLOAD:jvm.dll")
+  target_link_libraries(jni delayimp)
+endif()
+
 if(TARGET os_media_controls_plugin)
   # MSVC 14.51 makes C++/WinRT's experimental coroutine include a hard error.
   target_compile_definitions(
@@ -141,9 +149,7 @@ endif()
 set(BUILD_BUNDLE_DIR "$<TARGET_FILE_DIR:${BINARY_NAME}>")
 # Make the "install" step default, as it's required to run.
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
-endif()
+set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "Beam runtime bundle" FORCE)
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
