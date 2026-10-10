@@ -32,6 +32,8 @@ class VideoStore2DFallbackState extends State<VideoStore2DFallback> implements F
   final _firstCardFocus = FocusNode();
   bool _pendingFocus = false;
 
+  bool get hasContentFocus => _contentFocus.hasFocus || _firstCardFocus.hasFocus;
+
   @override
   void focusActiveTabIfReady() {
     _pendingFocus = true;
@@ -164,7 +166,7 @@ class VideoStore2DFallbackState extends State<VideoStore2DFallback> implements F
             ),
             SliverToBoxAdapter(
               child: SizedBox(
-                height: 210,
+                height: 240,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 24),

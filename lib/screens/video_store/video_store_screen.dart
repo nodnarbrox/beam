@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_scene/scene.dart' as fscene;
@@ -11,6 +12,7 @@ import 'package:vector_math/vector_math.dart' as vm;
 
 import '../../focus/dpad_navigator.dart';
 import '../../focus/key_event_utils.dart';
+import '../../media/media_library.dart';
 import '../../mixins/refreshable.dart';
 import '../../navigation/main_screen_scope.dart';
 import '../../providers/libraries_provider.dart';
@@ -38,9 +40,51 @@ class VideoStoreScreen extends StatefulWidget {
   State<VideoStoreScreen> createState() => _VideoStoreScreenState();
 }
 
-class _VideoStoreScreenState extends State<VideoStoreScreen>
+class _VideoStoreScreenState extends State<VideoStoreScreen> implements FocusableTab, Refreshable {
+  List<MediaLibrary> _libraries = const [];
+  GlobalKey<_VideoStoreContentState> _contentKey = GlobalKey();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final libraries = context.watch<LibrariesProvider>().libraries;
+    if (listEquals(_libraries, libraries)) return;
+    final restoreFocus = _contentKey.currentState?.hasContentFocus ?? false;
+    _libraries = libraries;
+    // Libraries arrive after profile binding and again after a server recovers.
+    // Recreate the catalog and scene together so an empty initial snapshot does
+    // not permanently strand the store. Unrelated provider notices keep the
+    // same content state, camera and poster cache.
+    _contentKey = GlobalKey();
+    if (restoreFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) focusActiveTabIfReady();
+      });
+    }
+  }
+
+  @override
+  void focusActiveTabIfReady() => _contentKey.currentState?.focusActiveTabIfReady();
+
+  @override
+  void refresh() => unawaited(context.read<LibrariesProvider>().refresh());
+
+  @override
+  Widget build(BuildContext context) => _VideoStoreContent(key: _contentKey);
+}
+
+class _VideoStoreContent extends StatefulWidget {
+  const _VideoStoreContent({super.key});
+
+  @override
+  State<_VideoStoreContent> createState() => _VideoStoreContentState();
+}
+
+class _VideoStoreContentState extends State<_VideoStoreContent>
     with SingleTickerProviderStateMixin
     implements FocusableTab {
+  bool get hasContentFocus => _focusNode.hasFocus || (_fallbackKey.currentState?.hasContentFocus ?? false);
+
   /// main_screen hands D-pad focus to the active tab through this. Without it
   /// the store relied on `autofocus: true`, which fights main_screen's
   /// programmatic focus control and left the remote stranded on the rail.
@@ -533,6 +577,10 @@ class _VideoStoreScreenState extends State<VideoStoreScreen>
         key == LogicalKeyboardKey.gameButtonA;
 
     if (isOk && event is KeyDownEvent) {
+      if (_data.totalTitles == 0) {
+        unawaited(context.read<LibrariesProvider>().refresh());
+        return KeyEventResult.handled;
+      }
       // Staged: OK on a shelf ENTERS that bay (shelf -> tier -> title), OK on
       // a selected title lifts it, OK on a held tape plays it.
       if (_pickedUp != null) {
@@ -1084,7 +1132,22 @@ class _VideoStoreScreenState extends State<VideoStoreScreen>
       onKeyEvent: _onKey,
       child: Stack(
         fit: StackFit.expand,
-        children: [if (ready) _buildSceneSurface(store) else _buildLoading(), if (ready) _buildMarquee(store)],
+        children: [
+          if (ready) _buildSceneSurface(store) else _buildLoading(),
+          if (ready) _buildMarquee(store),
+          if (ready && _data.totalTitles == 0)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(16)),
+                child: const Text(
+                  'No movies loaded.\nConnect your Plex or Jellyfin server.\nPress OK to retry.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 20),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

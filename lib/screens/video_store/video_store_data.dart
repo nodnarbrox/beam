@@ -227,8 +227,10 @@ class VideoStoreData {
     }
 
     for (final (library, client) in resolved) {
+      if (_disposed) return;
       try {
         final page = await _fetchPage(library, client, 0);
+        if (_disposed) return;
         if (page.items.isEmpty) continue;
         final titles = [
           for (final item in page.items) StoreTitle(item: item, library: library),
