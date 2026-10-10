@@ -4,9 +4,9 @@ A free, open-source media center for your Plex and Jellyfin libraries, with a wa
 
 **[Download Beam 2.10.1 beta](https://github.com/nodnarbrox/beam/releases/tag/v2.10.1-beam.1)** — available for Android TV / Onn, Windows, Linux and Mac.
 
-![Beam's Halloween Blockbusta store on Onn Android TV, showing pumpkins, haunted props, video racks and remote-control hints](docs/images/halloween-blockbusta-onn.png)
+![Halloween Blockbusta movie shelves filled with cover art, with Alien selected and pumpkins beside the rack](docs/images/halloween-movie-shelves.png)
 
-*Actual screenshot from the released Android build on the Onn, using reduced graphics effects.*
+*Halloween Blockbusta with library movie covers on its shelves. Actual screenshot from an earlier development build.*
 
 ## Downloads
 
@@ -37,6 +37,29 @@ The store includes scrolling video racks, pumpkins, haunted props and fixes for 
 | Left / Right | Turn. |
 | OK / Select | Browse a nearby rack. |
 | Back / Escape | Leave rack browsing or return focus to navigation. |
+
+## When Plex won't play
+
+Beam includes recovery for these Plex playback problems. It tries your own library first; after a failed library retry, it can search configured alternative sources for the same movie or episode.
+
+| Problem | What Beam does |
+| --- | --- |
+| Plex returns HTTP 500, including a rejected original-quality stream | Retries once at 480p / 1.5 Mbps before trying an alternative source. This can help when a relay or server limit prevents the original stream from playing. |
+| A library stream fails, its file is unavailable, or transcoding fails | Makes one library retry at the lower quality, then attempts the same title through Beam streaming if playback still fails. |
+| A dead transcode keeps showing a loading spinner | Detects repeated failed HLS video segments and enters the library-retry / alternative-source recovery path instead of waiting indefinitely on those segments. |
+| Android's ExoPlayer cannot play the stream | Switches to the bundled MPV player with the playback position carried into the replacement player. Device codec support still varies. |
+| A normal Plex video fails with a missing `youtube-dl` / `yt-dlp` error | Disables MPV's unnecessary website-download hook for these video URLs. |
+| Buffering consumes too much memory on a small Android TV device | Caps MPV's demuxer buffers according to the device heap to reduce memory pressure. This cannot prevent every out-of-memory failure. |
+| Plex is unreachable while resolving a known title | Can continue to configured alternative sources using that title's metadata. It cannot discover an unknown library from an offline server. |
+| A Plex Live TV stream fails | Retries with progressively reduced direct-stream support, allowing server transcoding. Live TV does not use movie/episode alternative-source recovery. |
+| One alternative streaming path fails or is slow | When both are configured and available, races Real-Debrid and native torrent streaming; a failed path does not immediately abandon the other. |
+| Recovery keeps reopening the same broken library stream | Bounds library retries and skips the already-failed library lookup when moving to alternatives. A failed Beam direct stream cannot recursively trigger the same fallback. |
+
+Alternative-source selection checks movie and episode identity, including season and episode numbers, to reduce wrong-title playback. Back can cancel source preparation. If no suitable source succeeds, Beam reports the failure rather than claiming playback worked.
+
+**Library recovery in the 2.10.2 development build:** Blockbusta reloads its shelves when libraries arrive after startup, a server connection recovers, or the active profile changes. Empty shelves offer an OK-to-retry action, and late results from the previous profile are discarded. This fix is installed on X1 and present in the source; the downloads above remain the published 2.10.1 beta.
+
+Beam itself is free. Alternative streaming needs your own configured services and an available source; Real-Debrid requires its own paid account. Native torrent streaming requires the app's VPN/proxy privacy checks to pass. Beam cannot restart a stopped Plex server, repair its files, fix account permissions, or guarantee every codec or title will play. These are implemented recovery paths; complete Plex playback on the TV is still awaiting verification against a reachable, signed-in server.
 
 ## Beta testing and known limits
 
