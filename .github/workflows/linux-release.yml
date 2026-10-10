@@ -21,6 +21,12 @@ jobs:
       - name: Check library loading and startup
         run: |
           set -eu
+          python3 - <<'PY'
+          import ctypes
+          bridge = ctypes.CDLL('build/linux/x64/release/bundle/lib/liblibtorrent_flutter.so')
+          bridge.lt_version.restype = ctypes.c_char_p
+          print('Loaded bundled torrent bridge:', bridge.lt_version().decode())
+          PY
           ldd build/linux/x64/release/bundle/plezy | tee linux-library-check.txt
           if grep -q 'not found' linux-library-check.txt; then exit 1; fi
           set +e
