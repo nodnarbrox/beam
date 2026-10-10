@@ -1,0 +1,40 @@
+name: Beam Linux release build
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install native development dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev libepoxy-dev libsecret-1-dev libayatana-appindicator3-dev libtorrent-rasterbar-dev xvfb
+      - name: Install pinned Flutter
+        run: |
+          git clone --depth 1 --branch 3.44.8 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - run: flutter pub get
+      - name: Build Linux from public source
+        run: flutter build linux --release --no-pub
+      - name: Check library loading and startup
+        run: |
+          set -eu
+          ldd build/linux/x64/release/bundle/plezy | tee linux-library-check.txt
+          if grep -q 'not found' linux-library-check.txt; then exit 1; fi
+          set +e
+          xvfb-run -a timeout 20s build/linux/x64/release/bundle/plezy >linux-startup.log 2>&1
+          result=$?
+          set -e
+          cat linux-startup.log
+          test "$result" -eq 124
+      - name: Package portable bundle
+        run: tar -czf beam-2.10.1-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beam-linux-x64
+          path: |
+            beam-2.10.1-linux-x64.tar.gz
+            linux-library-check.txt
+            linux-startup.log

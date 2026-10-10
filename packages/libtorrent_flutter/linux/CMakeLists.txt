@@ -14,7 +14,7 @@ endif()
 set(PREBUILT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../prebuilt/linux")
 set(PREBUILT_SO "${PREBUILT_DIR}/${LTF_LINUX_ARCH}/liblibtorrent_flutter.so")
 
-option(LIBTORRENT_FLUTTER_SKIP_DOWNLOAD "Skip downloading prebuilt native lib" OFF)
+option(LIBTORRENT_FLUTTER_SKIP_DOWNLOAD "Skip downloading prebuilt native lib" ON)
 
 if(NOT EXISTS "${PREBUILT_SO}" AND NOT LIBTORRENT_FLUTTER_SKIP_DOWNLOAD)
   set(_PUBSPEC "${CMAKE_CURRENT_SOURCE_DIR}/../pubspec.yaml")
