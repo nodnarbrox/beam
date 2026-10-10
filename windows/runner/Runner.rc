@@ -94,9 +94,9 @@ BEGIN
             VALUE "CompanyName", "com.edde746" "\0"
             VALUE "FileDescription", "Beam" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "Plezy" "\0"
+            VALUE "InternalName", "Beam" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 edde746. All rights reserved." "\0"
-            VALUE "OriginalFilename", "Plezy.exe" "\0"
+            VALUE "OriginalFilename", "Beam.exe" "\0"
             VALUE "ProductName", "Beam" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END

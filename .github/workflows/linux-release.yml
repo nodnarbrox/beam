@@ -10,7 +10,7 @@ jobs:
       - name: Install native development dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev libepoxy-dev libsecret-1-dev libayatana-appindicator3-dev libtorrent-rasterbar-dev libcurl4-openssl-dev xvfb
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev libepoxy-dev libsecret-1-dev libayatana-appindicator3-dev libtorrent-rasterbar-dev libcurl4-openssl-dev libevdev-dev libudev-dev xvfb
       - name: Install pinned Flutter
         run: |
           git clone --depth 1 --branch 3.44.8 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
