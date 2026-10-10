@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 
-SKIP = {".git", ".dart_tool", ".gradle", ".cxx", "build", "__pycache__"}
+SKIP = {".git", ".dart_tool", ".gradle", ".cxx", "build", "ephemeral", "__pycache__"}
 NATIVE = {".so", ".aar", ".dll", ".exe", ".a", ".dylib"}
 PRIVATE = {"key.properties", "local.properties", ".env"}
 

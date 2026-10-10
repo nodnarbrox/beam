@@ -11,6 +11,14 @@
       "provenance": "SHA-256 and ZIP contents match the official JitPack 0.14.0 AAR"
     },
     {
+      "path": "android/app/src/main/jniLibs/armeabi-v7a/liblibtorrent_flutter.so",
+      "sha256": "5b93b08d14cec99757f5a2e0bdafc290a2db03af1715335021944d5da4545e11",
+      "bytes": 13049596,
+      "sourceComponent": "sources/libtorrent-2.0.11.tar.gz",
+      "license": "BSD-3-Clause; Apache-2.0; BSL-1.0",
+      "provenance": "Patched repository bridge freshly rebuilt with the recorded compiler and identified dependency sources; local diagnostic build paths normalized by tools/sanitize_native_paths.py"
+    },
+    {
       "path": "android/app/src/main/jniLibs/armeabi-v7a/librclone.so",
       "sha256": "e17bcdb2a359e19afeb7400fd1bb514ff48441f0e1fb53181f6fe3e5fb1dafad",
       "bytes": 57213090,
