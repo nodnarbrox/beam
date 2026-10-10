@@ -56,6 +56,14 @@ Use the host-appropriate NDK toolchain directory on Windows. Strip the bridge
 with the NDK's `llvm-strip --strip-unneeded` before packaging. The public bridge
 build script is the exact compiler/link invocation used for this release.
 
+For dependency archives built under a private directory, run
+`python tools/sanitize_native_paths.py LIBRARY --build-root /original/build/root/`
+after linking. This normalizes embedded diagnostic and unused OpenSSL build-root
+strings in ELF `.rodata` with an equal-length replacement. Executable sections,
+relocations and offsets remain unchanged; the final packaged input hash records
+the normalized library. Fresh dependency builds should use compiler prefix maps
+and a neutral OpenSSL installation prefix instead.
+
 ## Other native libraries
 
 - **rclone 1.68.2**, MIT: freshly built from the companion's vendored source
