@@ -167,7 +167,7 @@ class YouTubeHome extends ChangeNotifier {
       avatarUrl: snapshot?['avatarUrl'] as String?,
       channel: true,
       connected ? 'Your YouTube account' : 'Connect your YouTube',
-      'Your likes, uploads and subscribed channels. Recommendations use your likes and videos played in Plezy.',
+      'Your likes, uploads and subscribed channels. Recommendations use your likes and videos played in Beam.',
       'account',
     );
     final searchEntry = _entry(

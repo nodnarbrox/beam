@@ -243,7 +243,7 @@ class _YouTubeAccountScreenState extends State<YouTubeAccountScreen> {
             ],
             const SizedBox(height: 12),
             const Text(
-              'Bring your likes, uploads, and subscriptions into this Plezy profile. Your likes also help shape For you.',
+              'Bring your likes, uploads, and subscriptions into this Beam profile. Your likes also help shape For you.',
             ),
             const SizedBox(height: 16),
             Wrap(
