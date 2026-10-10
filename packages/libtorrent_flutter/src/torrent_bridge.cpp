@@ -2201,8 +2201,9 @@ TORRENT_API lt_torrent_id lt_add_torrent_file(lt_session_t session,
     auto* sw = to_sw(session);
     try {
         lt::error_code ec;
-        auto ti = std::make_shared<lt::torrent_info>(fp, ec);
-        if (ec) { set_err(ec.message()); return -1; }
+        // The throwing filename constructor is supported by both 2.0 and
+        // 2.1; the latter removed the error_code overload from its current ABI.
+        auto ti = std::make_shared<lt::torrent_info>(std::string(fp));
         lt::add_torrent_params atp;
         atp.ti = ti; atp.save_path = path;
         atp.flags &= ~lt::torrent_flags::paused;
